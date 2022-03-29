@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='nw_setup',
-    version='0.1.0',
+    version='0.1.2',
     license='proprietary',
     description='Module Experiment',
 
@@ -17,7 +17,7 @@ setup(
 
     entry_points={
         "console_scripts": [
-          'hsasaki = foo:main'
+          'nw_setup = nw_setup.nw_setup:main'
         ]
     }
 )
