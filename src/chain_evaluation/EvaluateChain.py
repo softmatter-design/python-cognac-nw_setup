@@ -643,6 +643,43 @@ class MakeHist:
 			script += 'set style fill solid 0.5\nset boxwidth ' + str(bin_width) + '\n'
 			script += '#\nplot data w boxes noti'
 			script += ', \\\n f(x)'
+
+			# if self.base == "Rx":
+		# 	if (type(self.option) == list) and len(self.option) == 4:
+		# 		n_seg = self.option[0]
+		# 		bond = self.option[1]
+		# 		cn = self.option[2]
+		# 		func = self.option[3]
+		# 	elif (type(self.option) == list) and len(self.option) == 2:
+		# 		n_seg = self.option[0]
+		# 		bond = self.option[1]
+		# 		cn = 1.7
+		# 		func = 0
+		# 	else:
+		# 		n_seg = 39
+		# 		bond = 0.97
+		# 		cn = 1.7
+		# 		func = 4
+		# 	script += 'N = ' + str(n_seg) + '\n'
+		# 	script += 'bond = ' + str(bond) + '\n'
+		# 	script += 'CN = ' + str(cn) + '\n'
+		# 	script += 'f = ' + str(func) + '\n'
+		# 	#
+		# 	script += 'R1 = CN*(N**0.5)*bond\n'
+		# 	script += 'C=0.25\n\n'
+		# 	#
+		# 	if func == 3:
+		# 		script += 'Pos = R1/2**0.5\ndelta = Pos*(1. - 2./f)**0.5\n\n'
+		# 		script += 'f(x) = C*(1./2.)*(1./(delta*(3.142*2.)**0.5))*(exp(-1.*((x-Pos)**2)/(2.*delta**2)) + exp(-1.*((x+Pos)**2)/(2.*delta**2)))\n\n'
+		# 		script += 'fit f(x) data via C\n\n'
+		# 	elif func == 4:
+		# 		script += 'Pos = R1/3**0.5\ndelta = Pos*(1. - 2./f)**0.5\n\n'
+		# 		script += 'f(x) = C*(1./2.)*(1./(delta*(3.142*2.)**0.5))*(exp(-1.*((x-Pos)**2)/(2.*delta**2)) + exp(-1.*((x+Pos)**2)/(2.*delta**2)))\n\n'
+		# 		script += 'fit f(x) data via C\n\n'
+		# 	#
+		# 	script += 'set style fill solid 0.5\nset boxwidth ' + str(bin_width) + '\n'
+		# 	script += '#\nplot data w boxes noti'
+		# 	script += ', \\\n f(x)'
 		#
 		if self.base == "R":
 			if (type(self.option) == list) and len(self.option) == 4:
