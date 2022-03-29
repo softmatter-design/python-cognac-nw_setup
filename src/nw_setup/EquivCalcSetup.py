@@ -26,7 +26,7 @@ class SetUpUDF:
 		self.greenkubo_time = sim_cond[12]
 		#
 		self.target_dir = target_dir
-		self.f_eval_py = 'evaluate_all.py'
+		self.f_eval_py = 'evaluate_nw'
 		
 		# Cognac用の名称設定
 		self.nw_name = "Network"
@@ -63,11 +63,11 @@ class SetUpUDF:
 		if self.entanglement == "Entangled":
 			batch = self.entangle_calc(batch)
 			# 評価用のパイソンスクリプトを作成
-			self.evaluate_setup("strand")
+			# self.evaluate_setup("strand")
 		elif self.entanglement == "NO_Entangled":
 			batch = self.npt_calc(batch)
 			# 評価用のパイソンスクリプトを作成
-			self.evaluate_setup("strand")
+			# self.evaluate_setup("strand")
 
 		#####################
 		# バッチファイルを作成
@@ -110,7 +110,7 @@ class SetUpUDF:
 		out_udf = present_udf.replace("uin", "out")
 		batch += self.ver_cognac + ' -I ' + present_udf + ' -O ' + out_udf + self.core + ' \n'
 		if f_eval:
-			batch += 'python ' + self.f_eval_py + ' ' + out_udf + '\n'
+			batch += self.f_eval_py + ' ' + out_udf + '\n'
 		read_udf = out_udf
 		return present_udf, read_udf, batch
 
