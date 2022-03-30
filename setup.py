@@ -10,7 +10,7 @@ setup(
 
     author='hsasaki',
     author_email='hsasaki@softmatters.net',
-    url='None.com',
+    url='https://github.com/softmatter-design/python-cognac-nw_setup/',
 
     packages=find_packages(where='src'),
     package_dir={'': 'src'},
