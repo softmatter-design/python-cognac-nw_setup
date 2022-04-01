@@ -665,7 +665,7 @@ class MakeHist:
 		# 	script += 'CN = ' + str(cn) + '\n'
 		# 	script += 'f = ' + str(func) + '\n'
 		# 	#
-		# 	script += 'R1 = CN*(N**0.5)*bond\n'
+		# 	script += 'R1 = bond*(CN*N)**0.5\n'
 		# 	script += 'C=0.25\n\n'
 		# 	#
 		# 	if func == 3:
