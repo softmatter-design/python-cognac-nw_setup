@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 ################################################################################
-from ast import arg
+# from ast import arg
 import numpy as np
 import copy
 import random
@@ -39,6 +39,16 @@ class SelectSet:
 
 		return calcd_data_dic
 	
+	############################
+	def select_set_multi(self):
+		# ネットワークを設定
+		if self.nw_model == "Regular":
+			calcd_data_dic = self.regnw_setup()
+		elif self.nw_model == "Random":
+			calcd_data_dic = self.rndnw_setup_multi()
+
+		return calcd_data_dic
+	
 	#######################################
 	def regnw_setup(self):
 		calcd_data_dic = self.calc_all()
@@ -50,6 +60,23 @@ class SelectSet:
 		if self.restart == '':
 			# トポロジーの異なるネットワークを探索して、任意の多重度のネットワークポリマーの代数的連結性の分布関数を策定
 			candidate_list, random_dir = self.top_search()
+		else:
+			# 設定したリスタートファイルを読み込んで、リストを作成
+			candidate_list, random_dir = self.top_select()
+
+		top_dic_list = self.nw_search(candidate_list, random_dir)
+
+		###########################################
+		# ターゲットとなるネットワーク全体の辞書を設定。
+		calcd_data_dic = self.make_data_dic(top_dic_list)
+		return calcd_data_dic
+
+	def rndnw_setup_multi(self):
+		self.base_top_list = self.make_8chain_dic()
+
+		if self.restart == '':
+			# トポロジーの異なるネットワークを探索して、任意の多重度のネットワークポリマーの代数的連結性の分布関数を策定
+			candidate_list, random_dir = self.top_search_multi()
 		else:
 			# 設定したリスタートファイルを読み込んで、リストを作成
 			candidate_list, random_dir = self.top_select()
@@ -512,9 +539,74 @@ class SelectSet:
 
 		return candidate_list, random_dir
 
+	def top_search_multi(self):
+		self.init_dic = self.base_top_list[0]
+		self.n_jp = self.base_top_list[3]
+		#
+		self.pre_sampling = self.cond_top[0] 
+		self.n_sampling = self.cond_top[1]
+		self.n_try = self.cond_top[2]
+		self.repeat = self.cond_top[3]
+		self.f_pool = self.cond_top[4]
+		#
+		random_dir = str(self.n_strand) +"_chains_" + str(self.n_cell) + "_cells_"
+		random_dir += str(self.n_sampling) + "_sampling_" + str(self.n_try) + "_trials_" + str(self.repeat) + "_times"
+		if os.path.isdir(random_dir):
+			print("#####\nRandom Calculation target dir exists!!\n")
+			while True:
+				choice = input("overwrite? [y/N]:").lower()
+				if choice in ['y', 'ye', 'yes']:
+					os.makedirs(random_dir, exist_ok = True)
+					break
+				else:
+					sys.exit('Bye now !')
+		else:
+			os.makedirs(random_dir, exist_ok = True)
+		#
+		candidate_list = self.strand_exchange_multi()
+		#
+		with open(os.path.join(random_dir, 'init.pickle'), mode = 'wb') as f:
+			pickle.dump(candidate_list, f)
+		#
+		print("##################################################")
+		print("Trial, Sampling = ", self.n_try, ", ", self.n_sampling)
+		print("Total Sampling = ", self.n_try*self.n_sampling)
+		print("Initial Candidates = ", len(candidate_list))
+		print("##################################################")
+
+		return candidate_list, random_dir
+
 	#####################################################
 	# 任意のストランドを選択し、ストランドの繋ぎ変えを行う
 	def strand_exchange(self):
+		tmp_list = []
+		# "self.random_reduce()" により任意のストランドを除去したものをサンプリング
+		print("Searching for Initial Random Structure of ", self.pre_sampling)
+		print("Please Wait a little bit!")
+		for i in range(self.pre_sampling):
+			args = [self.random_reduce(), i, "Pre"]
+			tmp_list.extend(self.search(args))
+		print("##################################################")
+		print("Pre_Search Result:", len(tmp_list))
+		print("##################################################")
+		#
+		for repeat in range(self.repeat):
+			# tmp_list を alg_const の昇順に並べ替えて、その分布に応じてサンプリング
+			tmp_array = np.array(tmp_list)
+			sortbyalg = tmp_array[np.argsort(tmp_array[:,1])]
+			args = []
+			tmp_list = []
+			step = int(len(sortbyalg)/self.n_sampling)
+			for i in range(self.n_sampling):
+				args = [list(sortbyalg[i*step])[0], i, str(repeat + 1)+"/"+str(self.repeat)]
+				tmp_list.extend(self.search(args))
+			print("##################################################")
+			print(str(repeat)+"/"+str(self.repeat), "Search Result:", len(tmp_list))
+			print("##################################################")
+
+		return tmp_list
+
+	def strand_exchange_multi(self):
 		tmp_list = []
 		p = Pool(self.f_pool)
 		# "self.random_reduce()" により任意のストランドを除去したものをサンプリング

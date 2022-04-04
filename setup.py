@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='nw_setup',
-    version='0.1.0',
+    version='0.2.0',
     license='proprietary',
     description='Module Experiment',
 
@@ -18,6 +18,7 @@ setup(
     entry_points={
         "console_scripts": [
           'nw_setup = nw_setup.nw_setup:main',
+          'nw_setup_multi = nw_setup.nw_setup_multi:main',
           'evaluate_nw = chain_evaluation.evaluate_all:evaluate'
         ]
     }

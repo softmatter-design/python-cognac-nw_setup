@@ -440,10 +440,10 @@ class EvaluateChain:
 		hist_list = [
 				["bond", bond_list, 200, "True", ['bond length', 'Freq.'], 'box'],
 				["angle", angle_list, 200, "True", ['angle [deg]', 'Freq.'], 'box'],
-				["Rx", Rx_list, 200, "True", ['|Rx|', 'Freq.'], [self.n_seg - 1, self.l_bond] ],
-				["Ry", Ry_list, 200, "True", ['|Ry|', 'Freq.'], [self.n_seg - 1, self.l_bond] ],
-				["Rz", Rz_list, 200, "True", ['|Rz|', 'Freq.'], [self.n_seg - 1, self.l_bond] ],
-				["R", R_list, 200, "True", ['|R|', 'Freq.'], [self.n_seg - 1, self.l_bond] ]
+				["Rx", Rx_list, 200, "True", ['|Rx|', 'Freq.'], self.calc_cond ],
+				["Ry", Ry_list, 200, "True", ['|Ry|', 'Freq.'], self.calc_cond ],
+				["Rz", Rz_list, 200, "True", ['|Rz|', 'Freq.'], self.calc_cond ],
+				["R", R_list, 200, "True", ['|R|', 'Freq.'], self.calc_cond ]
 				]
 		for cond in hist_list:
 			mh = MakeHist(cond, self.target_name)
@@ -624,87 +624,74 @@ class MakeHist:
 		#
 		script += '# \ndata = "' + self.f_dat + '" \nset output "' + self.f_png + ' "\n'
 		#
-		script += '#\nset size square\n#set xrange [0:]\n#set yrange [0:100]\n'
+		script += '#\nset size square\n'
 		script += '#\nset xlabel "' + self.leg[0] + '"\nset ylabel "' + self.leg[1] + '"\n\n'
 		#
 		if self.base == "Rx" or self.base == "Ry" or self.base == "Rz":
 			if type(self.option) == list:
 				n_seg = self.option[0]
 				bond = self.option[1]
+				cn = self.option[2]
+				func = self.option[3]
+				nu = self.option[4]
+				nw_type = self.option[5]
 			script += 'N = ' + str(n_seg) + '\n'
 			script += 'bond = ' + str(bond) + '\n'
-			script += 'CN=1.7\n'
-			script += 'C=1\n\n'
+			script += 'CN = ' + str(cn) + '\n'
+			script += 'func = ' + str(func) + '\n'
 			#
-			script += 'f(x) = C*(3/(2*pi*N*CN*bond**2))**(3/2)*exp(-3*x**2/(2*N*CN*bond**2))\n\n'
-			script += 'fit f(x) data via C, CN\n\n'
-			script += '#\nset label 1 sprintf("C_N=%.3f", CN) at graph 0.7, 0.8\n\n'
+			script += 'R1 = bond*(CN*(N+1))**0.5\n'
+			script += 'C=0.1\n\n'
+			#
+			if nw_type == 'Regular' and func == 3:
+				script += 'set xrange [0:]\n#set yrange [0:100]\n'
+				script += 'Pos = R1/2**0.5\ndelta = Pos*(1. - 2./func)**0.5\n\n'
+				script += 'f(x) = C*(1./2.)*(1./(delta*(3.142*2.)**0.5))*(exp(-1.*((x-Pos)**2)/(2.*delta**2)) + exp(-1.*((x+Pos)**2)/(2.*delta**2)))\n\n'
+				script += 'fit f(x) data via C, delta\n\n'
+				script += '#\nset label 1 sprintf("delta =%.3f", delta) at graph 0.7, 0.8\n\n'
+			elif nw_type == 'Regular' and func == 4:
+				script += 'set xrange [0:]\n#set yrange [0:100]\n'
+				script += 'Pos = R1/3**0.5\ndelta = Pos*(1. - 2./func)**0.5\n\n'
+				script += 'f(x) = C*(1./2.)*(1./(delta*(3.142*2.)**0.5))*(exp(-1.*((x-Pos)**2)/(2.*delta**2)) + exp(-1.*((x+Pos)**2)/(2.*delta**2)))\n\n'
+				script += 'fit f(x) data via C, delta\n\n'
+				script += '#\nset label 1 sprintf("delta =%.3f", delta) at graph 0.7, 0.8\n\n'
+			elif nw_type == 'Regular' and func == 6:
+				script += 'set xrange [0:]\n#set yrange [0:100]\n'
+				script += 'Pos = R1\ndelta = Pos*(1. - 2./func)**0.5\n\n'
+				script += 'f(x) = C*(1./2.)*(1./(delta*(3.142*2.)**0.5))*(exp(-1.*((x-Pos)**2)/(2.*delta**2)) + exp(-1.*((x+Pos)**2)/(2.*delta**2)))\n\n'
+				script += 'fit f(x) data via C, delta\n\n'
+				script += '#\nset label 1 sprintf("delta =%.3f", delta) at graph 0.7, 0.8\n\n'
+			elif nw_type == 'Regular' and func == 8:
+				script += 'set xrange [0:]\n#set yrange [0:100]\n'
+				script += 'Pos = R1/3**0.5\ndelta = Pos*(1. - 2./func)**0.5\n\n'
+				script += 'f(x) = C*(1./2.)*(1./(delta*(3.142*2.)**0.5))*(exp(-1.*((x-Pos)**2)/(2.*delta**2)) + exp(-1.*((x+Pos)**2)/(2.*delta**2)))\n\n'
+				script += 'fit f(x) data via C, delta\n\n'
+				script += '#\nset label 1 sprintf("delta =%.3f", delta) at graph 0.7, 0.8\n\n'
+			else:
+				script += '#set xrange [0:]\n#set yrange [0:100]\nfrc=1.0\n\n'
+				script += 'f(x) = C*exp(-1.*x**2./(2.*frc*R1**2.))/(2.*pi*frc*R1**2.)**(1/2)\n\n'
+				script += 'fit f(x) data via C, frc\n\n'
+				script += '#\nset label 1 sprintf("frc =%.3f", frc) at graph 0.7, 0.8\n\n'
 			#
 			script += 'set style fill solid 0.5\nset boxwidth ' + str(bin_width) + '\n'
 			script += '#\nplot data w boxes noti'
 			script += ', \\\n f(x)'
 
-			# if self.base == "Rx":
-		# 	if (type(self.option) == list) and len(self.option) == 4:
-		# 		n_seg = self.option[0]
-		# 		bond = self.option[1]
-		# 		cn = self.option[2]
-		# 		func = self.option[3]
-		# 	elif (type(self.option) == list) and len(self.option) == 2:
-		# 		n_seg = self.option[0]
-		# 		bond = self.option[1]
-		# 		cn = 1.7
-		# 		func = 0
-		# 	else:
-		# 		n_seg = 39
-		# 		bond = 0.97
-		# 		cn = 1.7
-		# 		func = 4
-		# 	script += 'N = ' + str(n_seg) + '\n'
-		# 	script += 'bond = ' + str(bond) + '\n'
-		# 	script += 'CN = ' + str(cn) + '\n'
-		# 	script += 'f = ' + str(func) + '\n'
-		# 	#
-		# 	script += 'R1 = bond*(CN*N)**0.5\n'
-		# 	script += 'C=0.25\n\n'
-		# 	#
-		# 	if func == 3:
-		# 		script += 'Pos = R1/2**0.5\ndelta = Pos*(1. - 2./f)**0.5\n\n'
-		# 		script += 'f(x) = C*(1./2.)*(1./(delta*(3.142*2.)**0.5))*(exp(-1.*((x-Pos)**2)/(2.*delta**2)) + exp(-1.*((x+Pos)**2)/(2.*delta**2)))\n\n'
-		# 		script += 'fit f(x) data via C\n\n'
-		# 	elif func == 4:
-		# 		script += 'Pos = R1/3**0.5\ndelta = Pos*(1. - 2./f)**0.5\n\n'
-		# 		script += 'f(x) = C*(1./2.)*(1./(delta*(3.142*2.)**0.5))*(exp(-1.*((x-Pos)**2)/(2.*delta**2)) + exp(-1.*((x+Pos)**2)/(2.*delta**2)))\n\n'
-		# 		script += 'fit f(x) data via C\n\n'
-		# 	#
-		# 	script += 'set style fill solid 0.5\nset boxwidth ' + str(bin_width) + '\n'
-		# 	script += '#\nplot data w boxes noti'
-		# 	script += ', \\\n f(x)'
-		#
 		if self.base == "R":
-			if (type(self.option) == list) and len(self.option) == 4:
+			if type(self.option) == list:
 				n_seg = self.option[0]
 				bond = self.option[1]
 				cn = self.option[2]
 				func = self.option[3]
-			elif (type(self.option) == list) and len(self.option) == 2:
-				n_seg = self.option[0]
-				bond = self.option[1]
-				cn = 1.7
-				func = 0
-			else:
-				n_seg = 39
-				bond = 0.97
-				cn = 1.7
-				func = 4
 			script += 'N = ' + str(n_seg) + '\n'
 			script += 'bond = ' + str(bond) + '\n'
 			script += 'CN = ' + str(cn) + '\n'
 			script += 'f = ' + str(func) + '\n'
-			script += 'C = 0.02\n\n'
-			script += 'f(x, CN) = C*4.*pi*x**2.*(3./(2.*pi*N*CN*bond**2.))**(3./2.)*exp(-3.*x**2./(2.*N*CN*bond**2.))\n'	
-			script += 'fit f(x, CN) data via CN, C\n\n'
-			script += '#\nset label 1 sprintf("C_N=%.3f", CN) at graph 0.7, 0.8\n\n'
+			script += 'R1 = bond*(CN*(N+1))**0.5\n'
+			script += 'C=0.1\nfrc=1.0\n\n'
+			script += 'f(x, CN) = C*4.*pi*x**2.*(3./(2.*pi*frc*R1**2.))**(3./2.)*exp(-3.*x**2./(2.*frc*R1**2.))\n'	
+			script += 'fit f(x, CN) data via frc, C\n\n'
+			script += '#\nset label 1 sprintf("fructuation=%.3f", frc) at graph 0.7, 0.8\n\n'
 			script += 'set style fill solid 0.5\nset boxwidth ' + str(bin_width) + '\n'
 			script += '#\nplot data w boxes noti'
 			script += ', \\\n f(x, CN)'
