@@ -13,22 +13,22 @@ import pickle
 from multiprocessing import Pool
 from UDFManager import UDFManager
 ################################################################################
-class SelectSet:
-	def __init__(self, nw_cond, sim_cond, rnd_cond, target_dir):
-		self.nw_model = nw_cond[0]
-		self.strand = nw_cond[1]
-		self.n_strand = nw_cond[2]
-		self.n_segments = nw_cond[3]
-		self.n_cell = nw_cond[4]
-		self.n_sc = nw_cond[5]
+# class SelectSet:
+# 	def __init__(self, nw_cond, sim_cond, rnd_cond, target_dir):
+# 		self.nw_model = nw_cond[0]
+# 		self.strand = nw_cond[1]
+# 		self.n_strand = nw_cond[2]
+# 		self.n_segments = nw_cond[3]
+# 		self.n_cell = nw_cond[4]
+# 		self.n_sc = nw_cond[5]
 
-		self.multi = sim_cond[1]
+# 		self.multi = sim_cond[1]
 
-		self.restart = rnd_cond[0] 
-		self.cond_top = rnd_cond[1]
-		self.n_hist = rnd_cond[2]
+# 		self.restart = rnd_cond[0] 
+# 		self.cond_top = rnd_cond[1]
+# 		self.n_hist = rnd_cond[2]
 
-		self.target_dir = target_dir
+# 		self.target_dir = target_dir
 
 
 
@@ -37,14 +37,14 @@ class SelectSet:
 
 
 ############################
-def select_set_multi(nw_cond, sim_cond, rnd_cond):
+def select_set_multi(nw_cond, sim_cond, rnd_cond, target_dir):
     nw_model = nw_cond[0]
     restart = rnd_cond[0] 
     # ネットワークを設定
     if nw_model == "Regular":
         calcd_data_dic = regnw_setup(nw_cond, sim_cond)
     elif nw_model == "Random":
-        calcd_data_dic = rndnw_setup_multi(nw_cond, rnd_cond, restart)
+        calcd_data_dic = rndnw_setup_multi(nw_cond, sim_cond, rnd_cond, restart, target_dir)
 
     return calcd_data_dic
 
@@ -53,7 +53,8 @@ def regnw_setup(nw_cond, sim_cond):
     calcd_data_dic = calc_all(nw_cond, sim_cond)
     return calcd_data_dic
 
-def rndnw_setup_multi(nw_cond, rnd_cond, restart):
+def rndnw_setup_multi(nw_cond, sim_cond, rnd_cond, restart, target_dir):
+    multi = sim_cond[1]
     restart = rnd_cond[0] 
     cond_top = rnd_cond[1]
     n_hist = rnd_cond[2]
@@ -62,16 +63,16 @@ def rndnw_setup_multi(nw_cond, rnd_cond, restart):
 
     if restart == '':
         # トポロジーの異なるネットワークを探索して、任意の多重度のネットワークポリマーの代数的連結性の分布関数を策定
-        candidate_list, random_dir = top_search_multi(cond_top, base_top_list)
+        candidate_list, random_dir = top_search_multi(nw_cond, cond_top, base_top_list)
     else:
         # 設定したリスタートファイルを読み込んで、リストを作成
         candidate_list, random_dir = top_select(restart)
 
-    top_dic_list = nw_search(candidate_list, random_dir, n_hist)
+    top_dic_list = nw_search(candidate_list, random_dir, n_hist, multi, target_dir)
 
     ###########################################
     # ターゲットとなるネットワーク全体の辞書を設定。
-    calcd_data_dic = self.make_data_dic(top_dic_list)
+    calcd_data_dic = make_data_dic(nw_cond, base_top_list, top_dic_list)
     return calcd_data_dic
 
 
@@ -272,7 +273,6 @@ def set_atom(sim_cond, nw_cond, jp_xyz, strand_se_xyz):
             jp_id_dic, jp_xyz_dic, atom_jp = set_jp_id_reg(jp, n_cell)
             atom_all.extend(atom_jp)
             pos_all.update(jp_xyz_dic)
-            # print(jp_xyz_dic)
             # サブチェイン中の各アトムのxyzリストとボンドリストを作成
             strand_xyz, bond_all, atom_sc, angle_all = set_strands(jp_id_dic, strand_se_xyz[mol], n_cell, n_segments, n_sc)
             #
@@ -499,59 +499,22 @@ def set_strands_8(jp_id_dic, strand_se_xyz, n_cell, start_jp):
 ################################################################################
 #########################################################
 # トポロジーの異なるネットワークを探索して、代数的連結性の分布関数を策定し、ネットワークトポロジーの配列辞書を決める。
-# def top_search(base_top_list):
-#     self.init_dic = base_top_list[0]
-#     self.n_jp = self.base_top_list[3]
-#     #
-#     self.pre_sampling = self.cond_top[0] 
-#     self.n_sampling = self.cond_top[1]
-#     self.n_try = self.cond_top[2]
-#     self.repeat = self.cond_top[3]
-#     self.f_pool = self.cond_top[4]
-#     #
-#     random_dir = str(self.n_strand) +"_chains_" + str(self.n_cell) + "_cells_"
-#     random_dir += str(self.n_sampling) + "_sampling_" + str(self.n_try) + "_trials_" + str(self.repeat) + "_times"
-#     if os.path.isdir(random_dir):
-#         print("#####\nRandom Calculation target dir exists!!\n")
-#         while True:
-#             choice = input("overwrite? [y/N]:").lower()
-#             if choice in ['y', 'ye', 'yes']:
-#                 os.makedirs(random_dir, exist_ok = True)
-#                 break
-#             else:
-#                 sys.exit('Bye now !')
-#     else:
-#         os.makedirs(random_dir, exist_ok = True)
-#     #
-#     candidate_list = self.strand_exchange()
-#     #
-#     with open(os.path.join(random_dir, 'init.pickle'), mode = 'wb') as f:
-#         pickle.dump(candidate_list, f)
-#     #
-#     print("##################################################")
-#     print("Trial, Sampling = ", self.n_try, ", ", self.n_sampling)
-#     print("Total Sampling = ", self.n_try*self.n_sampling)
-#     print("Initial Candidates = ", len(candidate_list))
-#     print("##################################################")
-
-#     return candidate_list, random_dir
-
 def top_search_multi(nw_cond, cond_top, base_top_list):
-    # self.nw_model = nw_cond[0]
+    # nw_model = nw_cond[0]
     # strand = nw_cond[1]
     n_strand = nw_cond[2]
-    # self.n_segments = nw_cond[3]
+    # n_segments = nw_cond[3]
     n_cell = nw_cond[4]
-    # self.n_sc = nw_cond[5]
+    # n_sc = nw_cond[5]
     #
     init_dic = base_top_list[0]
     n_jp = base_top_list[3]
     #
-    self.pre_sampling = cond_top[0] 
+    # pre_sampling = cond_top[0] 
     n_sampling = cond_top[1]
     n_try = cond_top[2]
     repeat = cond_top[3]
-    self.f_pool = cond_top[4]
+    # f_pool = cond_top[4]
     #
     random_dir = str(n_strand) +"_chains_" + str(n_cell) + "_cells_"
     random_dir += str(n_sampling) + "_sampling_" + str(n_try) + "_trials_" + str(repeat) + "_times"
@@ -582,34 +545,6 @@ def top_search_multi(nw_cond, cond_top, base_top_list):
 
 #####################################################
 # 任意のストランドを選択し、ストランドの繋ぎ変えを行う
-# def strand_exchange(init_dic):
-#     tmp_list = []
-#     # "random_reduce()" により任意のストランドを除去したものをサンプリング
-#     print("Searching for Initial Random Structure of ", self.pre_sampling)
-#     print("Please Wait a little bit!")
-#     for i in range(self.pre_sampling):
-#         args = [random_reduce(init_dic), i, "Pre"]
-#         tmp_list.extend(self.search(args))
-#     print("##################################################")
-#     print("Pre_Search Result:", len(tmp_list))
-#     print("##################################################")
-#     #
-#     for repeat in range(self.repeat):
-#         # tmp_list を alg_const の昇順に並べ替えて、その分布に応じてサンプリング
-#         tmp_array = np.array(tmp_list)
-#         sortbyalg = tmp_array[np.argsort(tmp_array[:,1])]
-#         args = []
-#         tmp_list = []
-#         step = int(len(sortbyalg)/self.n_sampling)
-#         for i in range(self.n_sampling):
-#             args = [list(sortbyalg[i*step])[0], i, str(repeat + 1)+"/"+str(self.repeat)]
-#             tmp_list.extend(self.search(args))
-#         print("##################################################")
-#         print(str(repeat)+"/"+str(self.repeat), "Search Result:", len(tmp_list))
-#         print("##################################################")
-
-#     return tmp_list
-
 def strand_exchange_multi(init_dic, n_jp, cond_top, n_strand, n_cell):
     pre_sampling = cond_top[0] 
     n_sampling = cond_top[1]
@@ -622,7 +557,7 @@ def strand_exchange_multi(init_dic, n_jp, cond_top, n_strand, n_cell):
     # "random_reduce()" により任意のストランドを除去したものをサンプリング
     print("Searching for Initial Random Structure of ", pre_sampling)
     print("Please Wait a little bit!")
-    args = [[random_reduce(init_dic, n_strand, n_cell), i, "Pre"] for i in range(pre_sampling), init_dic, n_jp, n_try] 
+    args = [[random_reduce(init_dic, n_strand, n_cell, n_jp), i, "Pre", init_dic, n_jp, n_try] for i in range(pre_sampling)] 
     result = p.map(search, args)
     for data in result:
         tmp_list.extend(data)
@@ -630,21 +565,21 @@ def strand_exchange_multi(init_dic, n_jp, cond_top, n_strand, n_cell):
     print("Pre_Search Result:", len(tmp_list))
     print("##################################################")
     #
-    for repeat in range(repeat):
+    for count in range(repeat):
         # tmp_list を alg_const の昇順に並べ替えて、その分布に応じてサンプリング
         tmp_array = np.array(tmp_list)
         sortbyalg = tmp_array[np.argsort(tmp_array[:,1])]
         args = []
         step = int(len(sortbyalg)/n_sampling)
         for i in range(n_sampling):
-            args.append([list(sortbyalg[i*step])[0], i, str(repeat + 1)+"/"+str(repeat), init_dic, n_jp, n_try])
+            args.append([list(sortbyalg[i*step])[0], i, str(count)+"/"+str(repeat), init_dic, n_jp, n_try])
         # 
         result = p.map(search, args)
         tmp_list = []
         for data in result:
             tmp_list.extend(data)
         print("##################################################")
-        print(str(repeat)+"/"+str(repeat), "Search Result:", len(tmp_list))
+        print(str(count)+"/"+str(repeat), "Search Result:", len(tmp_list))
         print("##################################################")
 
     return tmp_list
@@ -684,7 +619,7 @@ def search(args):
 
 #########################################################
 # 任意のストランドを選択し、所望の分岐数にストランドを消去
-def random_reduce(init_dic, n_strand, n_cell):
+def random_reduce(init_dic, n_strand, n_cell, n_jp):
     alg_const = 0
     while alg_const <= 0:
         tmp_dic = copy.deepcopy(init_dic)
@@ -820,7 +755,7 @@ def top_select(restart):
 
 #####################################################################
 # ヒストグラム中の最大頻度を与えるネットワークトポロジーの配列辞書を決める。
-def nw_search(candidate_list, random_dir, n_hist):
+def nw_search(candidate_list, random_dir, n_hist, multi, target_dir):
     tmp_list = []
     val_list = []
     data_list = []
@@ -831,7 +766,7 @@ def nw_search(candidate_list, random_dir, n_hist):
     x, val = make_hist_all(cond, random_dir)
 
     # 最頻値のレンジを決める
-    val_range = self.find_range(x, val)
+    val_range = find_range(x, val, multi)
     # 上記のレンジに入る配列をピックアップ
     for i in candidate_list:
         if i[1] >= val_range[0] and i[1] <= val_range[1]:
@@ -845,8 +780,8 @@ def nw_search(candidate_list, random_dir, n_hist):
             val_list.append(selected_list[1])
             data_list.append(selected_list[0])
             count += 1
-        if len(val_list) == self.multi:
-            u = UDFManager(os.path.join(self.target_dir, 'target_condition.udf'))
+        if len(val_list) == multi:
+            u = UDFManager(os.path.join(target_dir, 'target_condition.udf'))
             u.put(random_dir, 'TargetCond.Model.RandomData')
             u.put(val_list, 'TargetCond.Model.SelectedValue[]')
             u.write()
@@ -857,18 +792,18 @@ def nw_search(candidate_list, random_dir, n_hist):
                     f.write("arg. con. = " + str(round(i, 4)) + '\n')
             return data_list
     #
-    print("No effective list was found for multi numbers of", self.multi, "!  Try again!!")
+    print("No effective list was found for multi numbers of", multi, "!  Try again!!")
     sys.exit()
 
 
 #######################
 # 最大頻度の範囲を決める。
-def find_range(self, x, val):
+def find_range(x, val, multi):
     index = np.where(val == max(val))[0][0]
     f_range = 0
     value = 0
     if index < len(val) -1:
-        while value < self.multi:
+        while value < multi:
             value = 0
             f_range += 1
             for i in range(2*f_range + 1):
@@ -899,29 +834,30 @@ def find_range(self, x, val):
 def make_hist_all(cond_list, random_dir):
     base = cond_list[0]
     list = cond_list[1]
-    bins = cond_list[2]
+    bin = cond_list[2]
     norm = cond_list[3]
-    self.leg = cond_list[4]
+    leg = cond_list[4]
 
     f_dat = "nw_hist.dat"
     f_plt = "make_hist.plt"
-    self.f_png = "histgram.png"
+    f_png = "histgram.png"
     # ヒストグラムのデータ作成
-    bin_width, hist_data, val, x = make_hist_data(list, norm, bins)
+    bin_width, hist_data, val, x = make_hist_data(list, norm, bin)
     # ヒストグラムのデータを書き出し 
     write_data(hist_data, random_dir, f_dat)
     # グラフを作成
-    make_graph(bin_width, random_dir, f_plt)
+    make_graph(bin_width, random_dir, f_plt, leg, f_png, f_dat)
     return x, val
 
 # ヒストグラムのデータ作成
-def make_hist_data(list, norm, bins):
+def make_hist_data(list, norm, bin):
     # ヒストグラムを作成
-    weights = np.ones(len(list))/float(len(list))
+    weight = np.ones(len(list))/float(len(list))
+    print(bin)
     if norm:
-        val, x = np.histogram(list, bins, weights)
+        val, x = np.histogram(list, bins=bin, weights=weight)
     else:
-        val, x = np.histogram(list, bins)
+        val, x = np.histogram(list, bins=bin)
     # グラフ用にデータを変更
     bin_width = (x[1]-x[0])
     mod_x = (x + bin_width/2)[:-1]
@@ -938,8 +874,8 @@ def write_data(hist_data, random_dir, f_dat):
     return
 
 # グラフを作成
-def make_graph(bin_width, random_dir, f_plt):
-    make_script(bin_width, random_dir)
+def make_graph(bin_width, random_dir, f_plt, leg, f_png, f_dat):
+    make_script(bin_width, random_dir, leg, f_png, f_dat, f_plt)
     cwd = os.getcwd()
     os.chdir(random_dir)
     if platform.system() == "Windows":
@@ -950,36 +886,37 @@ def make_graph(bin_width, random_dir, f_plt):
     return
     
 # 必要なスクリプトを作成
-def make_script(bin_width, random_dir):
+def make_script(bin_width, random_dir, leg, f_png, f_dat, f_plt):
     script = 'set term pngcairo font "Arial,14" \nset colorsequence classic \n'
-    script += '# \ndata = "' + self.f_dat + '" \nset output "' + self.f_png + ' "\n'
+    script += '# \ndata = "' + f_dat + '" \nset output "' + f_png + ' "\n'
     script += '#\nset size square\n# set xrange [0:1.0]\n#set yrange [0:100]\n'
-    script += '#\nset xlabel "' + self.leg[0] + '"\nset ylabel "' + self.leg[1] + '"\n\n'
+    script += '#\nset xlabel "' + leg[0] + '"\nset ylabel "' + leg[1] + '"\n\n'
     script += 'set style fill solid 0.5\nset boxwidth ' + str(bin_width) + '\n'
     script += '#\nplot data w boxes noti'
     print("OK")
-    with open(os.path.join(random_dir, self.f_plt), 'w') as f:
-        # script = self.script_content(bin_width)
+    with open(os.path.join(random_dir, f_plt), 'w') as f:
         f.write(script)
     return
     
 ################################################################################
 # ターゲットとなるネットワーク全体の辞書を決める。
 ################################################################################
-def make_data_dic(self, top_dic_list):
-    self.jp_xyz_dic = self.base_top_list[1]
-    self.atom_jp = self.base_top_list[2]
-    self.vector_dic = self.base_top_list[4]
+def make_data_dic(nw_cond, base_top_list, top_dic_list):
+    n_segments = nw_cond[3]
+    n_sc = nw_cond[5]
+    jp_xyz_dic = base_top_list[1]
+    atom_jp = base_top_list[2]
+    vector_dic = base_top_list[4]
 
     calcd_data_dic_list = []
     for str_top_dic in top_dic_list:
         atom_all = []
         pos_all = {}
         #
-        strand_xyz, bond_all, atom_strand, angle_all = self.make_strands(str_top_dic)
-        atom_all.extend(self.atom_jp)
+        strand_xyz, bond_all, atom_strand, angle_all = make_strands(str_top_dic, jp_xyz_dic, vector_dic, n_segments, n_sc)
+        atom_all.extend(atom_jp)
         atom_all.extend(atom_strand)
-        pos_all.update(self.jp_xyz_dic)
+        pos_all.update(jp_xyz_dic)
         pos_all.update(strand_xyz)
         #
         calcd_data_dic = {"atom_all":atom_all, "bond_all":bond_all, "pos_all":pos_all, "angle_all":angle_all}
@@ -987,22 +924,22 @@ def make_data_dic(self, top_dic_list):
     return calcd_data_dic_list
 
 # 一本のストランド中の各アトムのxyzリストとボンドリストを作成
-def make_strands(self, str_top_dic):
+def make_strands(str_top_dic, jp_xyz_dic, vector_dic, n_segments, n_sc):
     strand_xyz = {}
     bond_all = {}
     atom_strand = []
     angle_all = []
-    seq_atom_id = len(self.jp_xyz_dic)
+    seq_atom_id = len(jp_xyz_dic)
     bond_id = 0
     # 
     for strand_id in str_top_dic:
         # 各ストランドの始点と終点のjpごとのXYZで処理する
         start_id = str_top_dic[strand_id][0]
         end_id = str_top_dic[strand_id][1]
-        vector = self.vector_dic[strand_id]
-        start_xyz = np.array(self.jp_xyz_dic[start_id])
-        end_xyz = np.array(self.jp_xyz_dic[end_id])
-        tmp_xyz, tmp_bond, tmp_atom_st, tmp_angle, seq_atom_id, bond_id = self.calc_single_strand_rnd(start_id, end_id, vector, start_xyz, end_xyz, seq_atom_id, bond_id)
+        vector = vector_dic[strand_id]
+        start_xyz = np.array(jp_xyz_dic[start_id])
+        end_xyz = np.array(jp_xyz_dic[end_id])
+        tmp_xyz, tmp_bond, tmp_atom_st, tmp_angle, seq_atom_id, bond_id = calc_single_strand_rnd(start_id, end_id, vector, start_xyz, end_xyz, seq_atom_id, bond_id, n_segments, n_sc)
         #
         strand_xyz.update(tmp_xyz)
         bond_all.update(tmp_bond)
@@ -1011,7 +948,7 @@ def make_strands(self, str_top_dic):
     return strand_xyz, bond_all, atom_strand, angle_all
 
 # 一本のストランド中の各アトムのxyzリストとボンドリストを作成
-def calc_single_strand_rnd(self, start_id, end_id, vector, start_xyz, end_xyz, seq_atom_id, bond_id):
+def calc_single_strand_rnd(start_id, end_id, vector, start_xyz, end_xyz, seq_atom_id, bond_id, n_segments, n_sc):
     tmp_xyz = {}
     tmp_bond = {}
     tmp_angle = []
@@ -1020,14 +957,14 @@ def calc_single_strand_rnd(self, start_id, end_id, vector, start_xyz, end_xyz, s
     s_id = start_id
     tmp_angle.append(s_id)
     # ストランドの鎖長分のループ処理
-    unit_len = 1./(self.n_segments + 1)
+    unit_len = 1./(n_segments + 1)
     ortho_vec = find_ortho_vec(vector)
     mod_o_vec = np.linalg.norm(vector)*ortho_vec
-    for seg in range(self.n_segments):	
+    for seg in range(n_segments):	
         #
         pos = tuple(start_xyz + vector*(seg + 1)*unit_len)
         tmp_xyz[seq_atom_id] = pos
-        if seg == 0 or seg == self.n_segments - 1:
+        if seg == 0 or seg == n_segments - 1:
             tmp_atom_st.append([seq_atom_id, 1, 1])
         else:
             tmp_atom_st.append([seq_atom_id, 2, 2])
@@ -1043,9 +980,9 @@ def calc_single_strand_rnd(self, start_id, end_id, vector, start_xyz, end_xyz, s
         s_id = e_id
         seq_atom_id += 1
         #
-        if self.n_sc != 0:
+        if n_sc != 0:
             sc_s_id = s_id
-            for i in range(self.n_sc):
+            for i in range(n_sc):
                 tmp_xyz[seq_atom_id] = tuple(np.array(pos)  +  (i + 1)*mod_o_vec*unit_len)
                 # print(tuple(np.array(pos)  +  (i + 1)*ortho_vec*unit_len))
                 tmp_atom_st.append([seq_atom_id, 2, 1])
