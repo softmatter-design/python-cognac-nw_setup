@@ -50,7 +50,7 @@ def makenewudf():
 						repeat:int "探索計算の繰り返し数"
 						n_parallel:int "並行計算のCPU数"} "ランダムサーチ計算する場合の条件を設定",
 						Read:{dir_name:string} "過去の計算結果のディレクトリを記入",
-					N_histgram:int "ヒストグラムの分割数"
+					histgram_bins:int "ヒストグラムの分割数"
 					} "ランダム構造での条件を入力"
 				} "シミュレーションの条件を設定"
 			NetWork:{N_Segments: int "ストランド中のセグメント数", 
@@ -177,7 +177,7 @@ class ReadCondSetup:
 		## Networkモデルの設定
 		self.restart = ''
 		self.cond_top = []
-		n_hist = 0
+		histgram_bins = 0
 		#
 		if self.nw_model == "Regular":
 			self.strand = u.get('TargetCond.Model.Regular.chains')
@@ -204,7 +204,7 @@ class ReadCondSetup:
 		###################
 		if self.nw_model == "Random":
 			self.calc = u.get('TargetCond.Model.Random.Calc_Topolpgy')
-			n_hist = u.get('TargetCond.Model.Random.N_histgram')
+			histgram_bins = u.get('TargetCond.Model.Random.histgram_bins')
 			if self.calc == 'Read':
 				self.restart = u.get('TargetCond.Model.Random.Read.dir_name')
 				if not os.path.exists(os.path.join(self.restart, 'init.pickle')):
@@ -271,7 +271,7 @@ class ReadCondSetup:
 			self.c_n = 1.75
 		#########################################################################################
 		
-		rnd_cond = [self.restart, self.cond_top, n_hist]
+		rnd_cond = [self.restart, self.cond_top, histgram_bins]
 
 		return basic_cond, rnd_cond
 
@@ -334,7 +334,7 @@ class ReadCondSetup:
 				self.shrinkage = mod_unitcell/self.org_unitcell								# 収縮比
 				self.system = mod_unitcell*self.n_cell
 				# vol = self.system**3									    			# システム体積
-				print(self.n_cell)
+				# print(self.n_cell)
 				self.multi = calcd_multi
 				mod_e2e = self.shrinkage*self.e2e											# 収縮後の末端間距離
 				unit_cell = mod_unitcell
