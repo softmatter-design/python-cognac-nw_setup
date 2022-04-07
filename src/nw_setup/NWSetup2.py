@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 ################################################################################
 # from ast import arg
+import re
 import numpy as np
 import copy
 import random
@@ -607,39 +608,42 @@ def search(args):
 	alg_const = calc_lap_mat(target_dic, n_jp)
 	print(id, "Sampling ID =", x,  "Initial Algebratic Connectivity =", alg_const)
 	#
-	tmp2 = []
-	tmp3 = []
+	result = []
 	count = 0
 	failed = 0
 	show = 5
-	for count in range(n_try):
+	while count < n_try:
 		# 現状のストランドのリストの中からランダムに一つ選択し、"selected_strand"とする。
 		selected_strand = random.choice(list(target_dic.keys()))
 		# 繋ぎ変え得るストランドのリストを現状のネットワークと比較して、交換可能なセットを見つける。
-		tmp= []
-		tmp = find_pair(selected_strand, target_dic, init_dic, n_jp)
-		print("returned", tmp[1], calc_lap_mat(tmp[0], n_jp))
-		tmp3.append(tmp[0])
-		if len(tmp3) > 2:
-			for i in tmp3:
-					print("added to 3", calc_lap_mat(i, n_jp))
-		if tmp[1] != 0:
-			tmp2.append(tmp)
-			for i in tmp2:
-				print("added", i[1], calc_lap_mat(i[0], n_jp))
+		tmp_dic, alg_const = find_pair(selected_strand, target_dic, init_dic, n_jp)
+		print('ret', alg_const, calc_lap_mat(tmp_dic, n_jp))
+		if alg_const != 0:
+			count += 1
+			result.append([tmp_dic, alg_const])
+			failed = 0
 			if count != 0 and round(show*count/n_try) == show*count//n_try and round(show*count/n_try) == -(-show*count//n_try):
 				print(id, "Sampling ID =", x, "count = ", count)
-
-				if count == n_try:
-					
-					return tmp2
 		else:
 			failed +=1
-		if failed == n_try:
+
+		target_dic = tmp_dic
+
+		if failed >= n_try:
 			print("##########################################")
 			print(id, "Sampling ID =", x,  " FAILED!! with ", failed, "th trials.")
 			print("##########################################")
-	return tmp2
+			count = n_try
+			failed = 0
+
+		# print('app', result[-1][1], calc_lap_mat(result[-1][0], n_jp))
+
+		for i in result:
+			print('all', i[1], calc_lap_mat(i[0], n_jp))
+
+	for i in result:
+		print(i[1], calc_lap_mat(i[0], n_jp))
+	return result
 
 #########################################################
 # 任意のストランドを選択し、所望の分岐数にストランドを消去
@@ -694,12 +698,12 @@ def find_pair(selected_strand, target_dic, init_dic, n_jp):
 				target_dic.update(tmp_dic)
 				result_dic = target_dic
 				alg_const = calc_lap_mat(result_dic, n_jp)
-				return [result_dic, alg_const]
+				return result_dic, alg_const
 			else:
 				alg_const = 0
 		else:
 				alg_const = 0
-	return [result_dic, alg_const]
+	return result_dic, alg_const
 
 #################################################################
 # 任意のjpと連結したjpを見つけ、繋がり得る可能性のあるjpをリストアップ
