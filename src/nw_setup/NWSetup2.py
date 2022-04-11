@@ -11,17 +11,17 @@ import subprocess
 import sys
 import os
 import pickle
-from multiprocessing import Pool
+import multiprocessing as mp
 from UDFManager import UDFManager
 ################################################################################
 #
-def select_set_multi(nw_cond, sim_cond, rnd_cond, target_dir):
+def select_set(nw_cond, sim_cond, rnd_cond, target_dir):
 	nw_model = nw_cond[0]
 	# ネットワークを設定
 	if nw_model == "Regular":
 		calcd_data_dic = regnw_setup(nw_cond, sim_cond)
 	elif nw_model == "Random":
-		calcd_data_dic = rndnw_setup_multi(nw_cond, sim_cond, rnd_cond, target_dir)
+		calcd_data_dic = rndnw_setup(nw_cond, sim_cond, rnd_cond, target_dir)
 
 	return calcd_data_dic
 
@@ -30,7 +30,7 @@ def regnw_setup(nw_cond, sim_cond):
 	calcd_data_dic = calc_all(nw_cond, sim_cond)
 	return calcd_data_dic
 
-def rndnw_setup_multi(nw_cond, sim_cond, rnd_cond, target_dir):
+def rndnw_setup(nw_cond, sim_cond, rnd_cond, target_dir):
 	multi = sim_cond[1]
 	restart = rnd_cond[0] 
 	cond_top = rnd_cond[1]
@@ -39,7 +39,7 @@ def rndnw_setup_multi(nw_cond, sim_cond, rnd_cond, target_dir):
 
 	if restart == '':
 		# トポロジーの異なるネットワークを探索して、任意の多重度のネットワークポリマーの代数的連結性の分布関数を策定
-		candidate_list, random_dir = top_search_multi(nw_cond, cond_top, base_top_list)
+		candidate_list, random_dir = top_search(nw_cond, cond_top, base_top_list)
 	else:
 		# 設定したリスタートファイルを読み込んで、リストを作成
 		candidate_list, random_dir = top_select(restart)
@@ -474,7 +474,7 @@ def set_strands_8(jp_id_dic, strand_se_xyz, n_cell, start_jp):
 ################################################################################
 #########################################################
 # トポロジーの異なるネットワークを探索して、代数的連結性の分布関数を策定し、ネットワークトポロジーの配列辞書を決める。
-def top_search_multi(nw_cond, cond_top, base_top_list):
+def top_search(nw_cond, cond_top, base_top_list):
 	n_strand = nw_cond[2]
 	n_cell = nw_cond[4]
 	#
@@ -499,14 +499,14 @@ def top_search_multi(nw_cond, cond_top, base_top_list):
 	else:
 		os.makedirs(random_dir, exist_ok = True)
 	#
-	candidate_list = strand_exchange_multi(init_dic, n_jp, cond_top, n_strand, n_cell)
+	candidate_list = strand_exchange(init_dic, n_jp, cond_top, n_strand, n_cell)
 	#
 	with open(os.path.join(random_dir, 'init.pickle'), mode = 'wb') as f:
 		pickle.dump(candidate_list, f)
 	#
 	print("##################################################")
-	print("Trial, Sampling = ", n_try, ", ", n_sampling)
-	print("Total Sampling = ", n_try*n_sampling)
+	print("Trial, Sampling, Repeat = ", n_try, ", ", n_sampling, ", ", repeat)
+	print("Total Sampling = ", n_try*n_sampling*repeat)
 	print("Initial Candidates = ", len(candidate_list))
 	print("##################################################")
 
@@ -514,90 +514,65 @@ def top_search_multi(nw_cond, cond_top, base_top_list):
 
 #####################################################
 # 任意のストランドを選択し、ストランドの繋ぎ変えを行う
-def strand_exchange_multi(init_dic, n_jp, cond_top, n_strand, n_cell):
+def strand_exchange(init_dic, n_jp, cond_top, n_strand, n_cell):
 	pre_sampling = cond_top[0] 
 	n_sampling = cond_top[1]
 	n_try = cond_top[2]
 	repeat = cond_top[3]
 	f_pool = cond_top[4]
+	
+	if mp.cpu_count() < f_pool:
+		f_pool = int(mp.cpu_count()/2) - 1
+	p = mp.Pool(f_pool)
 
+	pre_list = []
+	args = []
+	# "self.random_reduce()" により任意のストランドを除去したものをサンプリング
+	print("Searching for Initial Random Structure of ", pre_sampling)
+	print("Please Wait a little bit!")
 	if f_pool > 1:
-		pre_list = []
-		p = Pool(f_pool)
-		# "random_reduce()" により任意のストランドを除去したものをサンプリング
-		print("Searching for Initial Random Structure of ", pre_sampling)
-		print("Please Wait a little bit!")
-		args = [[random_reduce(init_dic, n_strand, n_cell, n_jp), i, "Pre", init_dic, n_jp, n_try] for i in range(pre_sampling)] 
+		for i in range(pre_sampling):
+			args.append([random_reduce(init_dic, n_strand, n_cell, n_jp).copy(), i, "Pre", init_dic, n_jp, n_try])
 		result = p.map(search, args)
 		for data in result:
 			pre_list.extend(data)
-		print("##################################################")
-		print("Pre_Search Result:", len(pre_list))
-		print("##################################################")
-		# pre_list を alg_const の昇順に並べ替えて、sortbyalgを作成
-		tmp_array = np.array(pre_list)
-		sortbyalg = tmp_array[np.argsort(tmp_array[:,1])]
-		#
-		candidate_list = []
-		for count in range(repeat):
-			args = []
-			start = 0
-			# サンプリング数が十分なときに、sortbyalg を代数的連結性の低い方から分割してサンプリング
-			if len(sortbyalg) > n_sampling:
-				step = int(len(sortbyalg)/n_sampling)
-				for i in range(n_sampling):
-					part = sortbyalg[start+step*i:start+step*(i+1)]
-					args.append([list(random.choice(part))[0], i, str(count)+"/"+str(repeat), init_dic, n_jp, n_try])
-			else:# サンプリング数が少ないときは、sortbyalg全体からランダムサンプリング
-				for i in range(n_sampling):
-					args.append([list(random.choice(sortbyalg))[0], i, str(count)+"/"+str(repeat), init_dic, n_jp, n_try])
-			# 
-			result = p.map(search, args)
-			
-			for data in result:
-				candidate_list.extend(data)
-			print("##################################################")
-			print(str(count)+"/"+str(repeat), "Search Result:", len(candidate_list))
-			print("##################################################")
 	else:
-		pre_list = []
-		# "self.random_reduce()" により任意のストランドを除去したものをサンプリング
-		print("Searching for Initial Random Structure of ", pre_sampling)
-		print("Please Wait a little bit!")
 		for i in range(pre_sampling):
-			args = [random_reduce(init_dic, n_strand, n_cell, n_jp), i, "Pre", init_dic, n_jp, n_try]
+			args = [random_reduce(init_dic, n_strand, n_cell, n_jp).copy(), i, "Pre", init_dic, n_jp, n_try]
 			tmp = search(args)
 			pre_list.extend(tmp)
-		print("##################################################")
-		print("Pre_Search Result:", len(pre_list))
-		print("##################################################")
+	print("##################################################")
+	print("Pre_Search Result:", len(pre_list))
+	print("##################################################")
 
-		# for i in pre_list:
-		# 	print(i[1], calc_lap_mat(i[0], n_jp))
-
-		# pre_list を alg_const の昇順に並べ替えて、sortbyalgを作成
-		tmp_array = np.array(pre_list)
-		sortbyalg = tmp_array[np.argsort(tmp_array[:,1])]
-		#
-		candidate_list = []
-		for count in range(repeat):
-			args = []
+	# pre_list を alg_const の昇順に並べ替えて、sortbyalgを作成
+	tmp_array = np.array(pre_list)
+	sortbyalg = tmp_array[np.argsort(tmp_array[:,1])]
+	#
+	candidate_list = []
+	step = int(len(sortbyalg)/n_sampling)
+	for count in range(repeat):
+		args = []
+		for i in range(n_sampling):
 			# サンプリング数が十分なときに、sortbyalg を代数的連結性の低い方から分割してサンプリング
-			if len(sortbyalg) > n_sampling:
-				step = int(len(sortbyalg)/n_sampling)
-				for i in range(n_sampling):
-					part = sortbyalg[step*i:step*(i+1)]
-					target =list(random.choice(part))
-					args = [target[0], i, str(count)+"/"+str(repeat), init_dic, n_jp, n_try]
-					candidate_list.extend(search(args))
-					for i in candidate_list:
-						print("candddd", i[1], calc_lap_mat(i[0], n_jp))
+			if len(sortbyalg) > n_sampling*repeat:
+				part = sortbyalg[step*i:step*(i+1)]
+				target =list(random.choice(part))
 			else:# サンプリング数が少ないときは、sortbyalg全体からランダムサンプリング
-				for i in range(n_sampling):
-					args = [list(random.choice(sortbyalg))[0], i, str(count)+"/"+str(repeat), init_dic, n_jp, n_try]
-			print("##################################################")
-			print(str(count)+"/"+str(repeat), "Search Result:", len(candidate_list))
-			print("##################################################")
+				target =list(random.choice(sortbyalg))
+			if f_pool > 1:
+				args.append([target[0].copy(), i, str(count+1)+"/"+str(repeat), init_dic, n_jp, n_try])
+			else:
+				args = [target[0].copy(), i, str(count+1)+"/"+str(repeat), init_dic, n_jp, n_try]
+				candidate_list.extend(search(args))
+		
+		if f_pool > 1:
+			result = p.map(search, args)
+		for data in result:
+			candidate_list.extend(data)
+		print("##################################################")
+		print(str(count)+"/"+str(repeat), "Search Result:", len(candidate_list))
+		print("##################################################")
 
 	return candidate_list
 
@@ -617,17 +592,14 @@ def search(args):
 		selected_strand = random.choice(list(target_dic.keys()))
 		# 繋ぎ変え得るストランドのリストを現状のネットワークと比較して、交換可能なセットを見つける。
 		tmp_dic, alg_const = find_pair(selected_strand, target_dic, init_dic, n_jp)
-		print('ret', alg_const, calc_lap_mat(tmp_dic, n_jp))
 		if alg_const != 0:
 			count += 1
-			result.append([tmp_dic, alg_const])
+			result.append([tmp_dic.copy(), alg_const])
 			failed = 0
 			if count != 0 and round(show*count/n_try) == show*count//n_try and round(show*count/n_try) == -(-show*count//n_try):
 				print(id, "Sampling ID =", x, "count = ", count)
 		else:
 			failed +=1
-
-		target_dic = tmp_dic
 
 		if failed >= n_try:
 			print("##########################################")
@@ -636,13 +608,6 @@ def search(args):
 			count = n_try
 			failed = 0
 
-		# print('app', result[-1][1], calc_lap_mat(result[-1][0], n_jp))
-
-		for i in result:
-			print('all', i[1], calc_lap_mat(i[0], n_jp))
-
-	for i in result:
-		print(i[1], calc_lap_mat(i[0], n_jp))
 	return result
 
 #########################################################

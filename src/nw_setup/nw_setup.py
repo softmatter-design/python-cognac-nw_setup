@@ -11,8 +11,7 @@ def main():
 
     ###################
     # ネットワークを設定
-    nwsetup = nw_setup.SelectSet(nw_cond, sim_cond, rnd_cond, target_dir)
-    calcd_data_dic = nwsetup.select_set()
+    calcd_data_dic = nw_setup.select_set(nw_cond, sim_cond, rnd_cond, target_dir)
 
     ##################
     # baseUDF の作成
