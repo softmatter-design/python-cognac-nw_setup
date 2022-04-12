@@ -1,4 +1,4 @@
 from .ReadNWConditions import setupcondition
-from .NWSetup2 import select_set
+from .NWSetup import select_set
 from .SetupInitUDF import MakeInitUDF
 from .EquivCalcSetup import SetUpUDF

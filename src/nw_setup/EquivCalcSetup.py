@@ -22,8 +22,9 @@ class SetUpUDF:
 		self.rfc_time = sim_cond[8]
 		self.equilib_repeat = sim_cond[9]
 		self.equilib_time = sim_cond[10]
-		self.greenkubo_repeat = sim_cond[11]
-		self.greenkubo_time = sim_cond[12]
+		self.greenkubo = sim_cond[11]
+		self.greenkubo_repeat = sim_cond[12]
+		self.greenkubo_time = sim_cond[13]
 		#
 		self.target_dir = target_dir
 		self.f_eval_py = 'evaluate_nw'
