@@ -12,9 +12,9 @@ def setupcondition():
 	# check 'calc_condition.udf' and make it.
 	findudf()
 	# Read udf and setup initial conditions.
-	basic_cond, nw_cond, sim_cond, rnd_cond, target_cond, target_dir = read_and_setcondition()
+	basic_cond, nw_cond, sim_cond, sim_cond2, rnd_cond, target_cond, target_dir = read_and_setcondition()
 
-	return basic_cond, nw_cond, sim_cond, rnd_cond, target_cond, target_dir
+	return basic_cond, nw_cond, sim_cond, sim_cond2, rnd_cond, target_cond, target_dir
 	
 ###########################################
 # check 'calc_condition.udf' and make it.
@@ -126,7 +126,7 @@ def read_and_setcondition():
 		# read udf
 		basic_cond, rnd_cond, nw_cond, sim_cond = readconditionudf()
 		# select
-		target_cond, mod_cond = calc_conditions(basic_cond, nw_cond, rnd_cond, sim_cond)
+		mod_cond, target_cond, sim_cond2 = calc_conditions(basic_cond, nw_cond, rnd_cond, sim_cond)
 		print('Change UDF: type [r]eload')
 		print('Quit input process: type [q]uit')
 		inp = input('Condition is OK ==> [y]es >> ').lower()
@@ -137,9 +137,9 @@ def read_and_setcondition():
 	if inp:
 		print("\n\nSetting UP progress !!")
 		# 計算用のディレクトリーを作成
-		target_dir = make_dir(basic_cond, nw_cond, sim_cond, mod_cond, target_cond)
+		target_dir = make_dir(basic_cond, nw_cond, sim_cond, sim_cond2, mod_cond, target_cond)
 
-		return basic_cond, nw_cond, sim_cond, rnd_cond, target_cond, target_dir
+		return basic_cond, nw_cond, sim_cond, sim_cond2, rnd_cond, target_cond, target_dir
 	else:
 		sys.exit("##### \nQuit !!")
 
@@ -210,21 +210,21 @@ def readconditionudf():
 	###################
 	## 多重度の設定
 	if u.get('TargetCond.Multiplisity.Set_or_Calc') == 'Set':
-		multi = u.get('TargetCond.Multiplisity.Set.Multiplicity')
-		density = 0
+		multi_org = u.get('TargetCond.Multiplisity.Set.Multiplicity')
+		density_org = 0
 	elif u.get('TargetCond.Multiplisity.Set_or_Calc') == 'Calc':
-		multi = 0
-		density = u.get('TargetCond.Multiplisity.Calc.TargetDensity')
+		multi_org = 0
+		density_org = u.get('TargetCond.Multiplisity.Calc.TargetDensity')
 	## 収縮に関する設定
 	if u.get('TargetCond.Shrinkage.Shrink') == 'Yes':
 		if u.get('TargetCond.Shrinkage.Yes.Control') == 'Density':
-			density = u.get('TargetCond.Shrinkage.Yes.Density.target_density')
-			shrinkage = 0.
+			density_org = u.get('TargetCond.Shrinkage.Yes.Density.target_density')
+			shrinkage = 1.
 		elif u.get('TargetCond.Shrinkage.Yes.Control') == 'Shrink':
 			shrinkage = u.get('TargetCond.Shrinkage.Yes.Shrinkage.value')
-			density = 0.
+			density_org = 0.
 	elif u.get('TargetCond.Shrinkage.Shrink') == 'No':
-		shrinkage = 1.
+		shrinkage = 0.
 	#####
 	entanglement = u.get('TargetCond.Entanglement.Type')
 	if entanglement == 'Entangled':
@@ -267,7 +267,7 @@ def readconditionudf():
 
 	nw_cond = [nw_model, strand, n_strand, n_segments, n_cell, n_sc, l_bond, c_n]
 
-	sim_cond = [entanglement, multi, density, shrinkage, expand, step_press, press_time, step_rfc, step_rfc_time, equilib_repeat, equilib_time, greenkubo, greenkubo_repeat, greenkubo_time, calc]
+	sim_cond = [entanglement, multi_org, density_org, shrinkage, expand, step_press, press_time, step_rfc, step_rfc_time, equilib_repeat, equilib_time, greenkubo, greenkubo_repeat, greenkubo_time, calc]
 
 	return basic_cond, rnd_cond, nw_cond, sim_cond
 
@@ -276,9 +276,9 @@ def readconditionudf():
 def calc_conditions(basic_cond, nw_cond, rnd_cond, sim_cond):
 	## 計算システムの諸量を計算して、出力
 	mod_cond = set_length(nw_cond)
-	target_cond = init_calc(basic_cond, nw_cond, rnd_cond, sim_cond, mod_cond)
+	target_cond, sim_cond2 = init_calc(basic_cond, nw_cond, rnd_cond, sim_cond, mod_cond)
 
-	return target_cond, mod_cond
+	return mod_cond, target_cond, sim_cond2
 
 #####################
 #
@@ -344,8 +344,8 @@ def init_calc(basic_cond, nw_cond, rnd_cond, sim_cond, mod_cond):
 	cond_top = rnd_cond[1]
 
 	entanglement  = sim_cond[0]
-	multi = sim_cond[1]
-	density = sim_cond[2] 
+	multi_org = sim_cond[1]
+	density_org = sim_cond[2] 
 	shrinkage = sim_cond[3]
 	expand = sim_cond[4]
 	step_press = sim_cond[5]
@@ -367,59 +367,62 @@ def init_calc(basic_cond, nw_cond, rnd_cond, sim_cond, mod_cond):
 
 	calc_flag = 0
 	err_dens = 0
-	if multi == 0:
+	if multi_org == 0:
 		calc_flag = 1
-		if shrinkage == 1.:
-			calcd_multi = round(density*org_unitcell**3/n_beads_unit)	# 密度を設定値とした場合に必要な多重度
+		if shrinkage == 0.:
+			calcd_multi = round(density_org*org_unitcell**3/n_beads_unit)	# 密度を設定値とした場合に必要な多重度
 			calcd_density = n_beads_unit*calcd_multi/org_unitcell**3		# 上記の多重度での密度
-			err_dens = round((calcd_density/density - 1)*100, 2) 		# 設定密度との誤差(%)
+			err_dens = round((calcd_density/density_org - 1)*100, 2) 		# 設定密度との誤差(%)
 			single_net_atom = int(n_beads_unit*n_cell**3.)	    		# 一つのネットワーク中の粒子数
 			total_net_atom = int(calcd_multi*single_net_atom)    			# 全システム中のネットワーク粒子数
-			mod_unitcell = (calcd_multi*n_beads_unit/density)**(1/3)					# その際のシステムサイズ
+			mod_unitcell = (calcd_multi*n_beads_unit/density_org)**(1/3)					# その際のシステムサイズ
 			shrinkage = mod_unitcell/org_unitcell								# 収縮比
 			system = mod_unitcell*n_cell
 			# vol = system**3									    			# システム体積
 			# print(n_cell)
-			multi = calcd_multi
+			multi_mod = calcd_multi
 			mod_e2e = shrinkage*e2e											# 収縮後の末端間距離
 			unit_cell = mod_unitcell
-			nu = n_chains*multi/unit_cell**3
-		elif shrinkage != 1.:
+			nu = n_chains*multi_org/unit_cell**3
+			density_mod = density_org
+		elif shrinkage != 0.:
 			sys.exit(u"\n############################################## \n多重度を自動計算にした場合、収縮条件は選択できません\n条件設定を見直してください。\n##############################################\n")
-	elif multi != 0:
-		if shrinkage == 1.:
+	elif multi_org != 0:
+		multi_mod = multi_org
+		if shrinkage == 0.:
 			err_dens = 0.
 			system = org_unitcell*n_cell						# e2e から決めたシステムサイズ
-			density = n_beads_unit*multi/org_unitcell**3	# 多重度での密度
+			density_mod = n_beads_unit*multi_org/org_unitcell**3	# 多重度での密度
 			single_net_atom = int(n_beads_unit*n_cell**3.)	    # 一つのネットワーク中の粒子数
-			total_net_atom = int(multi*single_net_atom)    	# 全システム中のネットワーク粒子数
+			total_net_atom = int(multi_org*single_net_atom)    	# 全システム中のネットワーク粒子数
 			# vol = system**3									    	# システム体積
 			mod_e2e = e2e											# 収縮後の末端間距離
 			unit_cell = org_unitcell
-			nu = n_chains*multi/unit_cell**3
-		elif shrinkage != 1.:
-			if density == 0.:
+			nu = n_chains*multi_org/unit_cell**3
+		elif shrinkage != 0.:
+			if density_org == 0.:
 				err_dens = 0.
 				mod_unitcell = org_unitcell*shrinkage
 				system = mod_unitcell*n_cell						# e2e から決めたシステムサイズ
-				density = n_beads_unit*multi/mod_unitcell**3	# 多重度での密度
+				density_mod = n_beads_unit*multi_org/mod_unitcell**3	# 多重度での密度
 				single_net_atom = int(n_beads_unit*n_cell**3.)	    # 一つのネットワーク中の粒子数
-				total_net_atom = int(multi*single_net_atom)    	# 全システム中のネットワーク粒子数
+				total_net_atom = int(multi_org*single_net_atom)    	# 全システム中のネットワーク粒子数
 				# vol = system**3									    	# システム体積
 				mod_e2e = shrinkage*e2e		
 				unit_cell = mod_unitcell									# 収縮後の末端間距離
-				nu = n_chains*multi/unit_cell**3
-			elif density > 0.:
+				nu = n_chains*multi_org/unit_cell**3
+			elif density_org > 0.:
 				err_dens = 0.
-				mod_unitcell = (n_beads_unit*multi/density)**(1/3)
+				mod_unitcell = (n_beads_unit*multi_org/density_org)**(1/3)
 				shrinkage = mod_unitcell/org_unitcell
 				single_net_atom = int(n_beads_unit*n_cell**3.)	    # 一つのネットワーク中の粒子数
-				total_net_atom = int(multi*single_net_atom)    	# 全システム中のネットワーク粒子数
+				total_net_atom = int(multi_org*single_net_atom)    	# 全システム中のネットワーク粒子数
 				system = mod_unitcell*n_cell						# e2e から決めたシステムサイズ
 				# vol = system**3									    	# システム体積
 				mod_e2e = shrinkage*e2e											# 収縮後の末端間距離
 				unit_cell = mod_unitcell
-				nu = n_chains*multi/unit_cell**3
+				nu = n_chains*multi_org/unit_cell**3
+				density_mod = density_org
 	else:
 		sys.exit("Something Wrong!!")
 	#
@@ -444,14 +447,14 @@ def init_calc(basic_cond, nw_cond, rnd_cond, sim_cond, mod_cond):
 	# text += "当初のシステムサイズ:\t\t" + str(round(org_system, 4)) + "\n"
 	text += "#########################################" + "\n"
 	if calc_flag == 1:
-		text += "設定密度:\t\t\t" + str(density) + "\n"
-		text += "算出された多重度:\t\t" + str(multi) + "\n"
+		text += "設定密度:\t\t\t" + str(density_mod) + "\n"
+		text += "算出された多重度:\t\t" + str(multi_mod) + "\n"
 		text += "上記の多重度での密度:\t\t" + str(round(calcd_density, 4)) + "\n"
 		text += "密度の誤差:\t\t\t" + str(round(err_dens, 3)) + "%" + "\n"
 		text += "収縮比:\t\t\t\t" + str(round(shrinkage, 4)) + "\n"
 	else:
-		text += "多重度:\t\t\t\t" + str(multi) + "\n"
-		text += "密度:\t\t\t\t" + str(round(density, 4)) + "\n"
+		text += "多重度:\t\t\t\t" + str(multi_org) + "\n"
+		text += "密度:\t\t\t\t" + str(round(density_mod, 4)) + "\n"
 		text += "収縮比:\t\t\t\t" + str(round(shrinkage, 4)) + "\n"
 	text += "NW の全セグメント数:\t\t" + str(total_net_atom) + "\n"
 	text += "システムサイズ:\t\t\t" + str(round(system, 4)) + "\n"
@@ -480,11 +483,13 @@ def init_calc(basic_cond, nw_cond, rnd_cond, sim_cond, mod_cond):
 
 	target_cond = [system, unit_cell, total_net_atom, nu]
 
-	return target_cond
+	sim_cond2 = [multi_mod, density_mod]
+
+	return target_cond, sim_cond2
 
 ################################################################################
 # 計算用のディレクトリーを作成
-def make_dir(basic_cond, nw_cond, sim_cond, mod_cond, target_cond):
+def make_dir(basic_cond, nw_cond, sim_cond, sim_cond2, mod_cond, target_cond):
 	nw_model = nw_cond[0]
 	strand = nw_cond[1]
 	n_strand = nw_cond[2]
@@ -494,19 +499,20 @@ def make_dir(basic_cond, nw_cond, sim_cond, mod_cond, target_cond):
 	l_bond = nw_cond[6]
 
 	entanglement  = sim_cond[0]
-	multi = sim_cond[1]
+
+	multi_mod = sim_cond2[0]
 
 	nu = target_cond[3]
-	target_name = nw_model + "_" + entanglement + "_" + strand + '_N_' + str(n_segments) + "_Cells_" + str(n_cell) + "_Multi_" + str(multi)
+	target_name = nw_model + "_" + entanglement + "_" + strand + '_N_' + str(n_segments) + "_Cells_" + str(n_cell) + "_Multi_" + str(multi_mod)
 	os.makedirs(target_name, exist_ok = True)
 	# with open(os.path.join(target_name, "calc.dat"), "w") as f:
 	# 	f.write("# segments\tbond_length\tCN\tfunc\tnu\tNW_type\n" + str(n_segments) + '\t' + str(l_bond) + '\t' + str(c_n ) + "\t" + str(round(nu, 5)) + '\t' + nw_model)
-	make_cond_udf(basic_cond, target_name, nw_cond, sim_cond, mod_cond, target_cond)
+	make_cond_udf(basic_cond, target_name, nw_cond, sim_cond, sim_cond2, mod_cond, target_cond)
 	return target_name
 
 ###########################################
 # make new udf when not found.
-def make_cond_udf(basic_cond, target_name, nw_cond, sim_cond, mod_cond, target_cond):
+def make_cond_udf(basic_cond, target_name, nw_cond, sim_cond, sim_cond2, mod_cond, target_cond):
 	ver_cognac = basic_cond[0]
 	blank_udf = basic_cond[1]
 	base_udf = basic_cond[2]
@@ -522,11 +528,12 @@ def make_cond_udf(basic_cond, target_name, nw_cond, sim_cond, mod_cond, target_c
 	c_n = nw_cond[7]
 
 	entanglement  = sim_cond[0]
-	multi = sim_cond[1]
-	density = sim_cond[2] 
 	shrinkage = sim_cond[3]
 	equilib_repeat = sim_cond[9]
 	equilib_time = sim_cond[10]
+
+	multi_mod = sim_cond2[0]
+	density_mod = sim_cond2[1] 
 
 	e2e = mod_cond[2]
 	org_unitcell = mod_cond[3]
@@ -628,10 +635,10 @@ def make_cond_udf(basic_cond, target_name, nw_cond, sim_cond, mod_cond, target_c
 	u.put(e2e, 'TargetCond.Strand.R')
 	u.put(org_unitcell, 'TargetCond.Strand.Initial_Unit_Cell')
 
-	u.put(multi, 'TargetCond.Multiplisity.Multiplicity')
+	u.put(multi_mod, 'TargetCond.Multiplisity.Multiplicity')
 
 	u.put(shrinkage, 'TargetCond.Shrinkage.Shrinkage')
-	u.put(density, 'TargetCond.Shrinkage.Density')
+	u.put(density_mod, 'TargetCond.Shrinkage.Density')
 
 	u.put(entanglement, 'TargetCond.Entanglement.Type')
 

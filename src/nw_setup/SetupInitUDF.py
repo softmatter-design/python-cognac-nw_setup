@@ -8,13 +8,14 @@ from UDFManager import UDFManager
 # Initial_UDF の作成
 ##########################################
 class MakeInitUDF:
-	def __init__(self, basic_cond, sim_cond, target_cond, calcd_data_dic):
+	def __init__(self, basic_cond, sim_cond, sim_cond2, target_cond, calcd_data_dic):
 		self.blank_udf = basic_cond[1]
 		self.base_udf = basic_cond[2]
 		#
 		self.entanglement = sim_cond[0]
-		self.target_density = sim_cond[2]
 		self.expand = sim_cond[4]
+
+		self.target_density = sim_cond2[1]
 
 		self.system_size = target_cond[0]
 		self.unit_cell = target_cond[1]
@@ -59,16 +60,6 @@ class MakeInitUDF:
 		self.make_base_udf(target_dir)
 
 		return target_dir
-	# ################################################################################
-	# # 計算用のディレクトリーを作成
-	# def make_dir(self):
-	# 	target_dir = self.nw_model + "_" + self.entanglement + "_" + self.strand + '_N_' + str(self.n_segments) + "_Cells_" + str(self.n_cell) + "_Multi_" + str(self.multi)
-	# 	os.makedirs(target_dir, exist_ok = True)
-	# 	with open(os.path.join(target_dir, "calc.dat"), "w") as f:
-	# 		f.write("# segments\tbond_length\tCN\tfunc\tnu\tNW_type\n" + str(self.n_segments) + '\t' + str(self.l_bond) + '\t' + str(self.c_n) + "\t" + str(round(self.nu, 5)) + '\t' + self.structure)
-	# 	# with open(os.path.join(target_dir, "calc_cond.txt"), "w") as f:
-	# 	# 	f.write(self.cond_txt)
-	# 	return target_dir
 
 	############################################
 	# base_udfを作成

@@ -9,13 +9,12 @@ from UDFManager import UDFManager
 # UDF の作成
 ##########################################
 class SetUpUDF:
-	def __init__(self, basic_cond, sim_cond, target_dir):
+	def __init__(self, basic_cond, sim_cond, sim_cond2, target_dir):
 		self.ver_cognac = basic_cond[0]
 		self.base_udf = basic_cond[2]
 		self.core = ' -n ' + str(basic_cond[3])
 		# 
 		self.entanglement = sim_cond[0]
-		self.density = sim_cond[2]
 		self.step_press = sim_cond[5]
 		self.press_time = sim_cond[6]
 		self.rfc = sim_cond[7]
@@ -25,6 +24,8 @@ class SetUpUDF:
 		self.greenkubo = sim_cond[11]
 		self.greenkubo_repeat = sim_cond[12]
 		self.greenkubo_time = sim_cond[13]
+
+		self.density = sim_cond2[1]
 		#
 		self.target_dir = target_dir
 		self.f_eval_py = 'evaluate_nw'

@@ -15,23 +15,24 @@ import multiprocessing as mp
 from UDFManager import UDFManager
 ################################################################################
 #
-def select_set(nw_cond, sim_cond, rnd_cond, target_dir):
+def select_set(nw_cond, sim_cond2, rnd_cond, target_dir):
 	nw_model = nw_cond[0]
 	# ネットワークを設定
 	if nw_model == "Regular":
-		calcd_data_dic = regnw_setup(nw_cond, sim_cond)
+		calcd_data_dic = regnw_setup(nw_cond, sim_cond2)
 	elif nw_model == "Random":
-		calcd_data_dic = rndnw_setup(nw_cond, sim_cond, rnd_cond, target_dir)
+		calcd_data_dic = rndnw_setup(nw_cond, sim_cond2, rnd_cond, target_dir)
 
 	return calcd_data_dic
 
 #######################################
-def regnw_setup(nw_cond, sim_cond):
-	calcd_data_dic = calc_all(nw_cond, sim_cond)
+def regnw_setup(nw_cond, sim_cond2):
+	calcd_data_dic = calc_all(nw_cond, sim_cond2)
 	return calcd_data_dic
 
-def rndnw_setup(nw_cond, sim_cond, rnd_cond, target_dir):
-	multi = sim_cond[1]
+def rndnw_setup(nw_cond, sim_cond2, rnd_cond, target_dir):
+	multi = sim_cond2[0]
+
 	restart = rnd_cond[0] 
 	cond_top = rnd_cond[1]
 	hist_bin = rnd_cond[2]
@@ -55,11 +56,11 @@ def rndnw_setup(nw_cond, sim_cond, rnd_cond, target_dir):
 ################################################
 ## REGULAR NW SETUP
 ################################################
-def calc_all(nw_cond, sim_cond):
+def calc_all(nw_cond, sim_cond2):
 	# 架橋点 JP を設定
 	jp_xyz, strand_se_xyz = calc_jp_strands(nw_cond)
 	#
-	calcd_data_dic = set_atom(sim_cond, nw_cond, jp_xyz, strand_se_xyz)
+	calcd_data_dic = set_atom(sim_cond2, nw_cond, jp_xyz, strand_se_xyz)
 	return calcd_data_dic
 ##########################################
 # JPおよびサブチェインの始点と終点のXYZを設定
@@ -232,12 +233,15 @@ def calc_jp_strands(nw_cond):
 	return jp_xyz, strand_se_xyz
 
 #########################################################
-def set_atom(sim_cond, nw_cond, jp_xyz, strand_se_xyz):
-	multi = sim_cond[1]
+def set_atom(sim_cond2, nw_cond, jp_xyz, strand_se_xyz):
+	multi = sim_cond2[0]
+
 	n_segments = nw_cond[3]
 	n_cell = nw_cond[4]
 	n_sc = nw_cond[5]
+
 	calcd_data_dic={}
+
 	for mul in (range(multi)):
 		# atom_all = []
 		# pos_all = {}
