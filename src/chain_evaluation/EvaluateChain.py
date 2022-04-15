@@ -638,11 +638,11 @@ class MakeHist:
 			script += 'N = ' + str(n_seg) + '\n'
 			script += 'bond = ' + str(bond) + '\n'
 			script += 'CN = ' + str(cn) + '\n'
-			script += 'func = ' + str(func) + '\n'
+			script += 'func = ' + str(func) + '\n\n'
 			#
 			script += 'R1 = bond*(CN*(N+1))**0.5\n'
-			script += 'C=0.1\n\n'
-			script += 'delta=R1\n\n'
+			script += 'C=0.1\n'
+			script += 'delta=R1\n'
 			script += 'frc = 1.0\n\n'
 			#
 			if nw_type == 'Regular' and func == 3:
@@ -671,7 +671,7 @@ class MakeHist:
 				script += '#\nset label 1 sprintf("frc =%.3f", frc) at graph 0.7, 0.8\n\n'
 			else:
 				script += '#set xrange [0:]\n#set yrange [0:100]\nfrc=1.0\n\n'
-				script += 'f(x) = C*exp(-1.*x**2./(2.*frc*R1**2.))/(2.*pi*frc*R1**2.)**(1/2)\n\n'
+				script += 'f(x) = C*exp(-1.*x**2./(2.*(frc*R1)**2.))/(2.*pi*(frc*R1)**2.)**(1/2)\n\n'
 				script += 'fit f(x) data via C, frc\n\n'
 				script += '#\nset label 1 sprintf("frc =%.3f", frc) at graph 0.7, 0.8\n\n'
 			#
@@ -691,12 +691,14 @@ class MakeHist:
 			script += 'f = ' + str(func) + '\n'
 			script += 'R1 = bond*(CN*(N+1))**0.5\n'
 			script += 'C=0.1\nfrc=1.0\n\n'
-			script += 'f(x, CN) = C*4.*pi*x**2.*(3./(2.*pi*frc*R1**2.))**(3./2.)*exp(-3.*x**2./(2.*frc*R1**2.))\n'	
-			script += 'fit f(x, CN) data via frc, C\n\n'
-			script += '#\nset label 1 sprintf("fructuation=%.3f", frc) at graph 0.7, 0.8\n\n'
+			script += 'f(x) = C*exp(-1.*(x-frc*R1)**2./(2.*sigma**2.))/(2.*pi*sigma**2.)**(1/2)\n\n'
+			script += '#f(x) = C*4.*pi*x**2.*(3./(2.*pi*(frc*R1)**2.))**(3./2.)*exp(-3.*x**2./(2.*(frc*R1)**2.))\n'	
+			script += 'fit f(x) data via frc, C, sigma\n\n'
+			script += '#\nset label 1 sprintf("frc.=%.3f", frc) at graph 0.7, 0.8\n'
+			script += 'set label 1 sprintf("sigma=%.3f", sigma) at graph 0.7, 0.8\n\n'
 			script += 'set style fill solid 0.5\nset boxwidth ' + str(bin_width) + '\n'
 			script += '#\nplot data w boxes noti'
-			script += ', \\\n f(x, CN)'
+			script += ', \\\n f(x)'
 		#
 		if self.base == "angle":
 			if self.option != "box":
