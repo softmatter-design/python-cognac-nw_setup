@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='nw_setup',
-    version='0.3.1',
+    version='0.3.2',
     license='proprietary',
     description='Module Experiment',
 

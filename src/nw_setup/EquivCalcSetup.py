@@ -333,7 +333,7 @@ class SetUpUDF:
 		#--- Initial_Structure ---
 		# Initial_Unit_Cell
 		p = 'Initial_Structure.Initial_Unit_Cell.'
-		u.put(0.85, p + 'Density')
+		u.put(self.density, p + 'Density')
 		u.put([0, 0, 0, 90.0, 90.0, 90.0], p + 'Cell_Size')
 		# Generate_Method
 		if read_udf == 'random':
