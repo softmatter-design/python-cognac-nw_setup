@@ -18,6 +18,44 @@ from CognacBasicAnalysis import *
 from CognacGeometryAnalysis import CognacGeometryAnalysis
 ################################################################################
 ################################################################################
+
+def msd():
+	samples = 3
+	records = 5
+
+	base = np.zeros(records)
+	target = np.array([range(i, i+records) for i in np.arange(samples)])
+
+	# tlist = []
+	# for step in range(1, records):
+	# 	tmp2 = []
+	# 	for number in range(records-1):
+	# 		tmp = []
+	# 		for i, elm in enumerate(base):
+	# 			if i == number:
+	# 				tmp.append(-1.)
+	# 			elif i == number+step:
+	# 				tmp.append(1.)
+	# 			else:
+	# 				tmp.append(elm)
+	# 		if number < records-step:
+	# 			tmp2.append(tmp)
+	# 		else:
+	# 			tmp2.append(base)
+	# 	tlist.append(tmp2)
+
+	tlist = [[[-1. if i == number else 1.0 if i == number + step else x for i, x in enumerate(base)] if number < records - step else base for number in range(records - 1)] for step in range(1, records)]
+
+	modar = np.array(tlist)
+
+	abs_d = np.abs(np.matmul(modar, np.transpose(target)))
+
+	print(abs_d)
+	print(np.average(abs_d, axis = 2))
+
+
+
+
 def evaluate_nw2():
 	target = file_select()
 	#
