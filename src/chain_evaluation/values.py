@@ -20,7 +20,20 @@ Ry_list = []
 Rz_list = []
 R_list = []
 #
+xp_list = []
 gr_list = []
 cn_list = []
 cn_ave = []
 cn_part = []
+#
+base_name = ''
+target_dir = ''
+data_list = []
+n_bins = 0
+norm = 1
+leg = []
+option = ''
+f_dat = ''
+f_plt = ''
+f_png = ''
+bin_width = 1.
