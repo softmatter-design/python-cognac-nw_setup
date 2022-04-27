@@ -184,16 +184,29 @@ def read_chain(rec):
 					#
 					val.R_list.append(e2e_dist)
 					# r2_list.append(r2)
-		
+		# gr
+		cg = CognacGeometryAnalysis(val.target, rec)
+		val.gr_list.append(cg.gr([atom]))
+		# xp
+		pos = []
+		for i in range(c_len):
+			segment = np.array(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][i]]))
+			pos.append(segment)
+		print(pos)
 		for p in range(c_len):
-			tmp = 0
-			for i in range(c_len):
-				segment = np.array(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][i]]))
-				tmp += segment*np.cos(p*np.pi*(i-1)/(c_len-1))
+			tmp = np.zeros(3)
 			end0 = np.array(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][0]]))
 			end1 = np.array(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][c_len - 1]]))
+			k = np.pi*p/(c_len-1)
+			for i in range(c_len):
+				segment = np.array(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][i]]))
+				tmp += segment*np.cos(k*i)
 			tmp2 = (tmp - (end0 + end1)/2.)/c_len
+			print(p)
+			print('mine', tmp/c_len)
+			print('cog', ba.Xp(pos, p))
 			xp[p].append(tmp2)
+			
 
 	xp_ave = []
 	for p in range(c_len):
