@@ -1,5 +1,4 @@
 """Minimal setup file for tasks project."""
-
 from setuptools import setup, find_packages
 
 setup(
@@ -18,8 +17,7 @@ setup(
     entry_points={
         "console_scripts": [
           'nw_setup = nw_setup.nw_setup:main',
-          'evaluate_nw = chain_evaluation.evaluate_all:evaluate',
-          'evaluate_nw2 = chain_evaluation.evaluate_all2:evaluate'
+          'evaluate_nw = chain_evaluation.evaluate_all:evaluate'
         ]
     }
 )

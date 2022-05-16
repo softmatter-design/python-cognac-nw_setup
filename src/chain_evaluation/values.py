@@ -12,7 +12,9 @@ nu = 0.
 # [val.n_seg, val.l_bond, val.cn, val.func, val.nu, val.nw_type]
 
 chain_list = []
+chain_len = 1
 
+record = 1
 bond_list = []
 angle_list = []
 Rx_list = []
