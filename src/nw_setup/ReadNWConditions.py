@@ -383,7 +383,8 @@ def init_calc(basic_cond, nw_cond, rnd_cond, sim_cond, mod_cond):
 			multi_mod = calcd_multi
 			mod_e2e = shrinkage*e2e											# 収縮後の末端間距離
 			unit_cell = mod_unitcell
-			nu = n_chains*multi_org/unit_cell**3
+			nu = n_chains*multi_mod/unit_cell**3
+			print(nu, n_chains, multi_mod, unit_cell)
 			density_mod = density_org
 		elif shrinkage != 0.:
 			sys.exit(u"\n############################################## \n多重度を自動計算にした場合、収縮条件は選択できません\n条件設定を見直してください。\n##############################################\n")
