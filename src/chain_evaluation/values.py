@@ -13,6 +13,7 @@ nu = 0.
 
 chain_list = []
 chain_len = 1
+chains = []
 
 record = 1
 bond_list = []
@@ -23,6 +24,8 @@ Rz_list = []
 R_list = []
 #
 xp_list = []
+xp0_list = []
+xp0_relax_ave = []
 gr_list = []
 cn_list = []
 cn_ave = []

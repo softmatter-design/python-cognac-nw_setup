@@ -21,7 +21,7 @@ import chain_evaluation.values as val
 ################################################################################
 # MAIN
 ################################################################################
-def evaluate_nw():
+def eval_relax():
 	# ネットワークからそれぞれのストランドに対応するポリマー鎖を抽出
 	chain_select()
 	# ポリマー鎖関連の特性情報を計算
@@ -29,6 +29,7 @@ def evaluate_nw():
 	# 計算結果を出力
 	make_output()
 	return
+	
 ################################################################################
 # ネットワークからそれぞれのストランドに対応するポリマー鎖を抽出
 ################################################################################
@@ -76,9 +77,11 @@ def read_all():
 # 架橋点およびストランドの構成アトムのリスト
 def make_chain_list():
 	jp_list = make_jp_list()
+	print('making JP list')
 	#
 	jp_pair_list = []
-	for target_jp in jp_list:
+	for count, target_jp in enumerate(jp_list):
+		print(f'searching JP_pair of {count:}/{len(jp_list)-1:}')
 		jp_pair, strand = make_jp_pair(target_jp)
 		for i in jp_pair:
 			jp_pair_list.append(i)
@@ -144,35 +147,38 @@ def eval_chain():
 	for val.record in range(1, rec_size):
 		print("Reading Rec=", val.record, '/', rec_size - 1)
 		val.uobj.jump(val.record)
-		chains = make_chains()
-		make_r2_ij(chains)
-		# read_chain()
+		make_chains()
+		#
+		make_r2_ij()
+		#
+		xp_calc()
 
 	# 鎖に沿ったセグメント間距離の平均を計算
 	calc_cn()
+
+	calc_xp_relax()
 	#
 	if val.target.split('_')[0] == 'GK':
 		calc_gk()
 	return
 
 def make_chains():
-	chains = []
 	for chain in val.chain_list:
 		mol = chain[0]
 		tmp = []
 		for atom in range(val.chain_len):
 			segment = val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][atom]])
 			tmp.append(segment)
-		chains.append(tmp)
-	return chains
+		val.chains.append(tmp)
+	return
 
-def make_r2_ij(chains):
+def make_r2_ij():
 	bound_setup()
 	CU.setCell(tuple(val.uobj.get("Structure.Unit_Cell.Cell_Size")))
 	# ステップの数に対応した空リストを作成
 	r2_ij = [[] for i in range(val.chain_len)]
 
-	for chain in chains:
+	for chain in val.chains:
 		for step in range(1, val.chain_len):
 			for start in range(val.chain_len - step):
 				end1 = tuple(chain[start])
@@ -189,7 +195,6 @@ def make_r2_ij(chains):
 					val.Rz_list.append(e2e_vec[2])
 					#
 					val.R_list.append(e2e_dist)
-	
 	# cn
 	cn = []
 	val.l_bond = np.average(np.array(val.bond_list))
@@ -205,40 +210,12 @@ def make_r2_ij(chains):
 	return
 
 # ポリマー鎖関連の特性情報
-def read_chain():
-	# 初期化
+def xp_calc():
 	# ステップの数に対応した空リストを作成
-	r2_ij = [[] for i in range(val.chain_len)]
 	xp = [[] for i in range(val.chain_len)]
 	# 
-	ba = CognacBasicAnalysis(val.target, val.record)
 	for chain in val.chain_list:
 		mol = chain[0]
-		
-		atom = val.uobj.get("Set_of_Molecules.molecule[].atom[]", [mol, chain[1][2]])[1]
-
-		#		
-		for step in range(1, val.chain_len):
-			for start in range(val.chain_len - step):
-				end1 = tuple(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][start]]))
-				end2 = tuple(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][start + step]]))
-				e2e_vec = CU.distanceWithBoundary(end1, end2)
-				e2e_dist = np.linalg.norm(np.array(e2e_vec))
-				r2 = e2e_dist**2
-				r2_ij[step].append(r2)
-				if step == 1:
-					val.bond_list.append(e2e_dist)
-				if step == val.chain_len -1:
-					val.Rx_list.append(e2e_vec[0])
-					val.Ry_list.append(e2e_vec[1])
-					val.Rz_list.append(e2e_vec[2])
-					#
-					val.R_list.append(e2e_dist)
-					# r2_list.append(r2)
-		# gr
-		# cg = CognacGeometryAnalysis(val.target, val.record)
-		# val.gr_list.append(cg.gr([atom]))
-		
 		# xp
 		pos = []
 		for i in range(val.chain_len):
@@ -255,35 +232,23 @@ def read_chain():
 			tmp2 = (tmp - (end0 + end1)/2.)/val.chain_len
 			xp[p].append(tmp2)
 			
-
 	xp_ave = []
 	for p in range(val.chain_len):
 		xp_ave.append([p, np.average(np.array(xp[p]), axis = 0)])
-		print('cog', ba.Xp(pos, p))
 		
 	val.xp_list.append(xp_ave)
-	print(val.xp_list)
-
+	val.xp0_list.append(xp_ave[0])
 		
-	# cn
-	cn = []
-	for i in range(1, len(r2_ij)):
-		cn.append([i, np.average(np.array(r2_ij[i]))/(i*val.l_bond**2)])
-	val.cn_list.append(cn)
-	# angle
-	anglename = val.uobj.get("Molecular_Attributes.Angle_Potential[].Name")
-	tmp = np.array(ba.angle(anglename[0]))
-	val.angle_list.extend(list(tmp[~np.isnan(tmp)]))
+	# # cn
+	# cn = []
+	# for i in range(1, len(r2_ij)):
+	# 	cn.append([i, np.average(np.array(r2_ij[i]))/(i*val.l_bond**2)])
+	# val.cn_list.append(cn)
+	# # angle
+	# anglename = val.uobj.get("Molecular_Attributes.Angle_Potential[].Name")
+	# tmp = np.array(ba.angle(anglename[0]))
+	# val.angle_list.extend(list(tmp[~np.isnan(tmp)]))
 	return
-
-
-
-
-
-
-
-
-
 
 
 # 周期境界条件の設定
@@ -302,20 +267,6 @@ def bound_setup():
 			boundarylist[i] = 3
 	CU.setBoundary(tuple(boundarylist))
 	return
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -360,21 +311,24 @@ def calc_cn():
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+##########
+#
+def calc_xp_relax():
+	max = len(val.xp0_list)
+	xp0_relax = [[] for i in range(max - 1)]
+	xp0_relax[0] = [1.0]
+	step = 1
+	while step < max -1:
+		for i, vec in enumerate(val.xp0_list):
+			if i + step < max:
+				print(i, step)
+				vec2 = val.xp0_list[i + step]
+				xp0_relax[step].append(np.dot(np.array(vec[1]), np.array(vec2[1]))/np.linalg.norm(vec[1])/np.linalg.norm(vec2[1]))
+		step += 1
+	for data in xp0_relax:
+		val.xp0_relax_ave.append(np.average(np.array(data)))
+	print(val.xp0_relax_ave)
+	return
 
 ###############################################################################
 # 計算結果を出力
