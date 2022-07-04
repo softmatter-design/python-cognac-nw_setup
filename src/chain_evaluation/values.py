@@ -1,6 +1,7 @@
 target = ''
 target_name = ''
 uobj = ''
+delta_t = 0.
 
 nw_type = ''
 func = 0
@@ -23,9 +24,9 @@ Ry_list = []
 Rz_list = []
 R_list = []
 #
-xp_list = []
-xp0_list = []
-xp0_relax_ave = []
+p_max = 1
+xp_ave = []
+xp_relax = []
 gr_list = []
 cn_list = []
 cn_ave = []

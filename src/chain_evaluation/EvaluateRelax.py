@@ -27,7 +27,7 @@ def eval_relax():
 	# ポリマー鎖関連の特性情報を計算
 	eval_chain()
 	# 計算結果を出力
-	make_output()
+	# make_output()
 	return
 	
 ################################################################################
@@ -53,6 +53,8 @@ def file_select():
 		val.target = param[1]
 		val.target_name = val.target.split('.')[0]
 		val.uobj = UDFManager(val.target)
+		val.uobj.jump(1)
+		val.delta_t = val.uobj.get("Time")
 	return
 
 # 計算条件から、ホモポリマーとネットワークを判断し、chain_list を読み出す。
@@ -143,23 +145,27 @@ def make_jp_pair(target_jp):
 # ポリマー鎖関連の特性情報を計算
 ###############################################################################
 def eval_chain():
+	val.p_max = 5
+	# ステップの数に対応した空リストを作成
+	val.xp_ave = [[] for i in range(val.p_max)]
+	#
 	rec_size = val.uobj.totalRecord()
 	for val.record in range(1, rec_size):
 		print("Reading Rec=", val.record, '/', rec_size - 1)
 		val.uobj.jump(val.record)
 		make_chains()
 		#
-		make_r2_ij()
+		# make_r2_ij()
 		#
 		xp_calc()
 
 	# 鎖に沿ったセグメント間距離の平均を計算
-	calc_cn()
+	# calc_cn()
 
 	calc_xp_relax()
 	#
-	if val.target.split('_')[0] == 'GK':
-		calc_gk()
+	# if val.target.split('_')[0] == 'GK':
+	# 	calc_gk()
 	return
 
 def make_chains():
@@ -211,9 +217,7 @@ def make_r2_ij():
 
 # ポリマー鎖関連の特性情報
 def xp_calc():
-	# ステップの数に対応した空リストを作成
-	xp = [[] for i in range(val.chain_len)]
-	# 
+	xp = [[] for i in range(val.p_max)]
 	for chain in val.chain_list:
 		mol = chain[0]
 		# xp
@@ -221,7 +225,7 @@ def xp_calc():
 		for i in range(val.chain_len):
 			segment = np.array(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][i]]))
 			pos.append(segment)
-		for p in range(val.chain_len):
+		for p in range(val.p_max):
 			tmp = np.zeros(3)
 			end0 = np.array(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][0]]))
 			end1 = np.array(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][val.chain_len - 1]]))
@@ -230,26 +234,10 @@ def xp_calc():
 				segment = np.array(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][i]]))
 				tmp += segment*np.cos(k*i)
 			tmp2 = (tmp - (end0 + end1)/2.)/val.chain_len
-			xp[p].append(tmp2)
-			
-	xp_ave = []
-	for p in range(val.chain_len):
-		xp_ave.append([p, np.average(np.array(xp[p]), axis = 0)])
-		
-	val.xp_list.append(xp_ave)
-	val.xp0_list.append(xp_ave[0])
-		
-	# # cn
-	# cn = []
-	# for i in range(1, len(r2_ij)):
-	# 	cn.append([i, np.average(np.array(r2_ij[i]))/(i*val.l_bond**2)])
-	# val.cn_list.append(cn)
-	# # angle
-	# anglename = val.uobj.get("Molecular_Attributes.Angle_Potential[].Name")
-	# tmp = np.array(ba.angle(anglename[0]))
-	# val.angle_list.extend(list(tmp[~np.isnan(tmp)]))
+			xp[p].append(tmp2)	
+	for p in range(val.p_max):
+		val.xp_ave[p].append(np.average(np.array(xp[p]), axis = 0))
 	return
-
 
 # 周期境界条件の設定
 def bound_setup():
@@ -267,8 +255,6 @@ def bound_setup():
 			boundarylist[i] = 3
 	CU.setBoundary(tuple(boundarylist))
 	return
-
-
 
 ###################################################################
 # 鎖に沿ったセグメント間距離の平均を計算
@@ -309,25 +295,24 @@ def calc_cn():
 		val.cn_ave.append([data[0], data[1]/count])
 	return
 
-
-
 ##########
 #
 def calc_xp_relax():
-	max = len(val.xp0_list)
-	xp0_relax = [[] for i in range(max - 1)]
-	xp0_relax[0] = [1.0]
-	step = 1
-	while step < max -1:
-		for i, vec in enumerate(val.xp0_list):
-			if i + step < max:
-				print(i, step)
-				vec2 = val.xp0_list[i + step]
-				xp0_relax[step].append(np.dot(np.array(vec[1]), np.array(vec2[1]))/np.linalg.norm(vec[1])/np.linalg.norm(vec2[1]))
-		step += 1
-	for data in xp0_relax:
-		val.xp0_relax_ave.append(np.average(np.array(data)))
-	print(val.xp0_relax_ave)
+	max = len(val.xp_ave[0])
+	val.xp_relax = [[] for i in range(val.p_max)]
+	for p in range(val.p_max):
+		relax = [[] for i in range(max - 1)]
+		relax[0] = [1.0]
+		step = 1
+		while step < max -1:
+			for i, vec in enumerate(val.xp_ave[p]):
+				if i + step < max:
+					vec2 = val.xp_ave[p][i + step]
+					relax[step].append(np.dot(np.array(vec), np.array(vec2))/np.linalg.norm(vec)/np.linalg.norm(vec2))
+			step += 1
+		for data in relax:
+			val.xp_relax[p].append(np.average(np.array(data)))
+		print(p, val.xp_relax[p])
 	return
 
 ###############################################################################
@@ -613,72 +598,76 @@ def multi_script_content():
 
 
 
+# グラフを作成
+def make_xp_graph():
+	make_multi_script()
+	cwd = os.getcwd()
+	os.chdir(val.target_dir)
+	if platform.system() == "Windows":
+		subprocess.call(val.f_plt, shell=True)
+	elif platform.system() == "Linux":
+		subprocess.call('gnuplot ' + val.f_plt, shell=True)
+	os.chdir(cwd)
+	return
 
+# 必要なスクリプトを作成
+def make_multi_script():
+	with open(os.path.join(val.target_dir, val.f_plt), 'w') as f:
+		script = multi_script_content()
+		f.write(script)
+	return
 
+# スクリプトの中身
+def multi_script_content():
+	repeat = len(val.data_list )
+	#
+	script = 'set term pngcairo font "Arial,14" \nset colorsequence classic \n'
+	script += '# \ndata = "' + val.f_dat + '" \nset output "' + val.f_png + ' "\n'
+	script += '#\nset size square\n#set xrange [1:]\n#set yrange [1:]\n'
+	script += '#\nset xlabel "' + val.leg[0] + '"\nset ylabel "' + val.leg[1] + '"\n\n'
+	#
+	if val.base_name == "CN" or val.base_name == "CN_ave" or val.base_name == "CN_part":
+		script += '#\nset xrange [1:]\nset yrange [1:]\n'
+		script += 'set key bottom\n\n'
+		script += 'ct = 0.274\n'
+		script += "f(x) = (1+ct)/(1-ct) -(2*ct*(1-ct**x))/(1-ct)**2/x\n\n"
+		script += 'plot '
+		if val.base_name == "CN":
+			for i in range(repeat):
+				script += 'data ind ' + str(i) + ' w l lc ' + str(i) + ' noti, \\\n'
+		elif val.base_name == "CN_part":
+			for i in range(repeat):
+				script += 'data ind ' + str(i) + ' w l lc ' + str(i) + ' ti "part:' + str(i) + '", \\\n'
+		else:
+			script += 'data w l ti "averaged", \\\n'
+		script += 'f(x) w l lw 2 ti "FreeRotationalModel"'
+	elif val.base_name == 'Corr_stress' or val.base_name == 'Corr_stress_mod':
+		script += 'set logscale xy \n\nset format x "10^{%L}" \nset format y "10^{%L}"\n\n'
+		script += 'plot '
+		script += 'data w l ti "Stress" \\\n'
+	elif val.base_name == 'Corr_stress_semi':
+		script += 'set logscale y \n\n#set format x "10^{%L}" \nset format y "10^{%L}"\n\n'
+		script += 'a = 1\ntau =1000\n\ns = 100\ne = 1000\n\n'
+		script += 'f(x) = a*exp(-1*x/tau) \n'
+		script += 'fit [s:e] f(x) data usi 1:2 via a,tau\n\n'
+		script += 'set label 1 sprintf("Fitted \\nA = %.1e \\n{/Symbol t} = %.1e \\nFitting Region: %d to %d", a, tau, s, e) at graph 0.35, 0.75\n\n'
+		script += 'plot '
+		script += 'data w l ti "Stress", \\\n'
+		script += '[s:e] f(x) noti'
+	elif val.base_name == 'Corr_stress_all':
+		script += 'set logscale xy \n\nset format x "10^{%L}" \nset format y "10^{%L}"\n\n'
+		script += 'plot data u 1:2 w l ti "G_t", \\\n'
+		script += 'data u 1:3 w l ti "xy", \\\n'
+		script += 'data u 1:4 w l ti "yz", \\\n'
+		script += 'data u 1:5 w l ti "zx", \\\n'
+		script += 'data u 1:6 w l ti "xx-yy", \\\n'
+		script += 'data u 1:7 w l ti "yy-zz"'
+	else:
+		script += 'plot '
+		for i in range(repeat):
+			script += 'data ind ' + str(i) + ' w l lc ' + str(i) + 'noti, \\\n'
 
-
-
-
-
-
-
-
-
-
-
-def msd():
-	samples = 10
-	records = 7
-
-	target = np.array([range(i, i+records) for i in np.arange(samples)])
-
-	base = np.zeros(records)
-
-	tlist = [[[-1. if i == number else 1.0 if i == number + step else x for i, x in enumerate(base)] if number < records - step else base for number in range(records - 1)] for step in range(1, records)]
-	# tlist = []
-	# for step in range(1, records):
-	# 	tmp2 = []
-	# 	for number in range(records-1):
-	# 		tmp = []
-	# 		for i, elm in enumerate(base):
-	# 			if i == number:
-	# 				tmp.append(-1.)
-	# 			elif i == number+step:
-	# 				tmp.append(1.)
-	# 			else:
-	# 				tmp.append(elm)
-	# 		if number < records-step:
-	# 			tmp2.append(tmp)
-	# 		else:
-	# 			tmp2.append(base)
-	# 	tlist.append(tmp2)
-
-
-	modar = np.array(tlist)
-
-
-	norm_ar = np.array([1./x for x in reversed(range(1, records))])
-	print(norm_ar)
-
-	abs_d = np.abs(np.matmul(modar, np.transpose(target)))
-	sum_data = np.sum(np.average(abs_d, axis = 2), axis = 1)
-	ave_abs = np.multiply(sum_data, norm_ar)
-	print(ave_abs)
-
-	sqred_d = np.square(np.matmul(modar, np.transpose(target)))
-	sum_sq_data = np.sum(np.average(sqred_d, axis = 2), axis = 1)
-	ave_sq = np.multiply(sum_sq_data, norm_ar)
-	print(ave_sq)
-
-
-
-
-
-
-
-
-
-
+	return script
 
 
 ####################################################################################
@@ -864,6 +853,52 @@ def modify(self, data_list):
 	# save_data(mod_gt, 'mod_gt.dat')
 	return mod_gt
 
+
+
+
+def msd():
+	samples = 10
+	records = 7
+
+	target = np.array([range(i, i+records) for i in np.arange(samples)])
+
+	base = np.zeros(records)
+
+	tlist = [[[-1. if i == number else 1.0 if i == number + step else x for i, x in enumerate(base)] if number < records - step else base for number in range(records - 1)] for step in range(1, records)]
+	# tlist = []
+	# for step in range(1, records):
+	# 	tmp2 = []
+	# 	for number in range(records-1):
+	# 		tmp = []
+	# 		for i, elm in enumerate(base):
+	# 			if i == number:
+	# 				tmp.append(-1.)
+	# 			elif i == number+step:
+	# 				tmp.append(1.)
+	# 			else:
+	# 				tmp.append(elm)
+	# 		if number < records-step:
+	# 			tmp2.append(tmp)
+	# 		else:
+	# 			tmp2.append(base)
+	# 	tlist.append(tmp2)
+
+
+	modar = np.array(tlist)
+
+
+	norm_ar = np.array([1./x for x in reversed(range(1, records))])
+	print(norm_ar)
+
+	abs_d = np.abs(np.matmul(modar, np.transpose(target)))
+	sum_data = np.sum(np.average(abs_d, axis = 2), axis = 1)
+	ave_abs = np.multiply(sum_data, norm_ar)
+	print(ave_abs)
+
+	sqred_d = np.square(np.matmul(modar, np.transpose(target)))
+	sum_sq_data = np.sum(np.average(sqred_d, axis = 2), axis = 1)
+	ave_sq = np.multiply(sum_sq_data, norm_ar)
+	print(ave_sq)
 
 
 
