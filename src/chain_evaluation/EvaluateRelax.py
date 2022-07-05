@@ -59,18 +59,18 @@ def file_select():
 
 # 計算条件から、ホモポリマーとネットワークを判断し、chain_list を読み出す。
 def read_all():
-	# 計算対象の条件を読み取る
-	if not os.access('target_condition.udf', os.R_OK):
-		print("'target_condition.udf' is not exists.")
-		exit(1)
-	else:
-		cond_u = UDFManager('target_condition.udf')
-		val.nw_type = cond_u.get('TargetCond.Model.TargetModel')
-		val.func = cond_u.get('TargetCond.NetWork.N_Strands')
-		val.n_seg = cond_u.get('TargetCond.NetWork.N_Segments')
-		val.l_bond= cond_u.get('SimulationCond.l_bond')
-		val.cn = cond_u.get('TargetCond.Strand.Characteristic_Ratio')
-		val.nu = cond_u.get('TargetCond.System.Nu')
+	# # 計算対象の条件を読み取る
+	# if not os.access('target_condition.udf', os.R_OK):
+	# 	print("'target_condition.udf' is not exists.")
+	# 	exit(1)
+	# else:
+	# 	cond_u = UDFManager('target_condition.udf')
+	# 	val.nw_type = cond_u.get('TargetCond.Model.TargetModel')
+	# 	val.func = cond_u.get('TargetCond.NetWork.N_Strands')
+	# 	val.n_seg = cond_u.get('TargetCond.NetWork.N_Segments')
+	# 	val.l_bond= cond_u.get('SimulationCond.l_bond')
+	# 	val.cn = cond_u.get('TargetCond.Strand.Characteristic_Ratio')
+	# 	val.nu = cond_u.get('TargetCond.System.Nu')
 	# ネットワークストランドのリストを作成
 	make_chain_list()
 	val.chain_len = len(val.chain_list[0][1])
@@ -220,10 +220,9 @@ def xp_calc():
 	xp = [[] for i in range(val.p_max)]
 	for chain in val.chain_list:
 		mol = chain[0]
-		# xp
 		pos = []
-		for i in range(val.chain_len):
-			segment = np.array(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][i]]))
+		for id in range(val.chain_len):
+			segment = np.array(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][id]]))
 			pos.append(segment)
 		for p in range(val.p_max):
 			tmp = np.zeros(3)
@@ -233,10 +232,8 @@ def xp_calc():
 			for i in range(val.chain_len):
 				segment = np.array(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][i]]))
 				tmp += segment*np.cos(k*i)
-			tmp2 = (tmp - (end0 + end1)/2.)/val.chain_len
-			xp[p].append(tmp2)	
-	for p in range(val.p_max):
-		val.xp_ave[p].append(np.average(np.array(xp[p]), axis = 0))
+			xp[p].append((tmp - (end0 + end1)/2.)/val.chain_len)
+	val.xp_list.append(xp)
 	return
 
 # 周期境界条件の設定
@@ -298,21 +295,30 @@ def calc_cn():
 ##########
 #
 def calc_xp_relax():
-	max = len(val.xp_ave[0])
+	max = len(val.xp_list)
 	val.xp_relax = [[] for i in range(val.p_max)]
-	for p in range(val.p_max):
-		relax = [[] for i in range(max - 1)]
-		relax[0] = [1.0]
-		step = 1
-		while step < max -1:
-			for i, vec in enumerate(val.xp_ave[p]):
-				if i + step < max:
-					vec2 = val.xp_ave[p][i + step]
-					relax[step].append(np.dot(np.array(vec), np.array(vec2))/np.linalg.norm(vec)/np.linalg.norm(vec2))
-			step += 1
-		for data in relax:
-			val.xp_relax[p].append(np.average(np.array(data)))
-		print(p, val.xp_relax[p])
+
+	relax = [[] for i in range(max - 1)]
+	relax[0] = [1.0 for i in range(val.p_max)]
+
+	step = 1
+	while step < max -1:
+		print(f'calculating XP relaxation: step {step:}/{max-1:}')
+		tmp = [[] for i in range(val.p_max)]
+		for record, rec_data in enumerate(val.xp_list):
+			for p, xp_data in enumerate(rec_data):
+				for chain, vec in enumerate(xp_data):
+					if record + step < max:
+						vec2 = val.xp_list[record + step][p][chain]
+						tmp[p].append(np.dot(np.array(vec), np.array(vec2))/np.linalg.norm(vec)/np.linalg.norm(vec2))
+		ave = np.average(np.array(tmp), axis = 1)
+		relax[step] = ave
+		step += 1
+
+	for i in range(val.p_max):
+		val.xp_relax[i] = list(np.array(relax)[:,i])
+	for data in val.xp_relax:
+		print(data)
 	return
 
 ###############################################################################
