@@ -150,6 +150,7 @@ def eval_chain():
 	val.xp_ave = [[] for i in range(val.p_max)]
 	#
 	rec_size = val.uobj.totalRecord()
+	CU.clearVectorMap()
 	for val.record in range(1, rec_size):
 		print("Reading Rec=", val.record, '/', rec_size - 1)
 		val.uobj.jump(val.record)
@@ -218,7 +219,7 @@ def make_r2_ij():
 # ポリマー鎖関連の特性情報
 def xp_calc():
 	xp = [[] for i in range(val.p_max)]
-	for chain in val.chain_list:
+	for chn_id, chain in enumerate(val.chain_list):
 		mol = chain[0]
 		pos = []
 		for id in range(val.chain_len):
@@ -232,7 +233,10 @@ def xp_calc():
 			for i in range(val.chain_len):
 				segment = np.array(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][i]]))
 				tmp += segment*np.cos(k*i)
-			xp[p].append((tmp - (end0 + end1)/2.)/val.chain_len)
+			tmp_xp = (tmp - (end0 + end1)/2.)/val.chain_len
+			xp[p].append(tmp_xp)
+			if p == 2:
+				CU.pushVector(str(chn_id), tuple(tmp_xp))
 	val.xp_list.append(xp)
 	return
 
@@ -295,30 +299,47 @@ def calc_cn():
 ##########
 #
 def calc_xp_relax():
-	max = len(val.xp_list)
-	val.xp_relax = [[] for i in range(val.p_max)]
+	# max = len(val.xp_list)
+	# val.xp_relax = [[] for i in range(val.p_max)]
 
-	relax = [[] for i in range(max - 1)]
-	relax[0] = [1.0 for i in range(val.p_max)]
+	# relax = [[] for i in range(max - 1)]
+	# relax[0] = [1.0 for i in range(val.p_max)]
 
-	step = 1
-	while step < max -1:
-		print(f'calculating XP relaxation: step {step:}/{max-1:}')
-		tmp = [[] for i in range(val.p_max)]
-		for record, rec_data in enumerate(val.xp_list):
-			for p, xp_data in enumerate(rec_data):
-				for chain, vec in enumerate(xp_data):
-					if record + step < max:
-						vec2 = val.xp_list[record + step][p][chain]
-						tmp[p].append(np.dot(np.array(vec), np.array(vec2))/np.linalg.norm(vec)/np.linalg.norm(vec2))
-		ave = np.average(np.array(tmp), axis = 1)
-		relax[step] = ave
-		step += 1
+	# step = 1
+	# while step < max -1:
+	# 	print(f'calculating XP relaxation: step {step:}/{max-1:}')
+	# 	tmp = [[] for i in range(val.p_max)]
+	# 	for record, rec_data in enumerate(val.xp_list):
+	# 		for p, xp_data in enumerate(rec_data):
+	# 			for chain, vec in enumerate(xp_data):
+	# 				if record + step < max:
+	# 					vec2 = val.xp_list[record + step][p][chain]
+	# 					tmp[p].append(np.dot(np.array(vec), np.array(vec2))/np.linalg.norm(vec)/np.linalg.norm(vec2))
+	# 	ave = np.average(np.array(tmp), axis = 1)
+	# 	relax[step] = ave
+	# 	step += 1
 
-	for i in range(val.p_max):
-		val.xp_relax[i] = list(np.array(relax)[:,i])
-	for data in val.xp_relax:
-		print(data)
+	# for i in range(val.p_max):
+	# 	val.xp_relax[i] = list(np.array(relax)[:,i])
+	
+	######
+	tmp=[]
+	for chn_id, chain in enumerate(val.chain_list):
+		tmp.append(CU.vectorCorrelation(str(chn_id)))
+
+	vec = tmp[0]
+	ss = np.sum(vec[0])
+	x0, y0, z0 = vec[0]
+	results = [ (val.delta_t*i, np.sum(vec[i])/ss, (vec[i][0]/x0, vec[i][1]/y0, vec[i][2]/z0)) for i in range(len(vec)) ]
+	print(results)
+	#####
+
+
+		
+	# print(val.xp_relax[1])
+	# for data in val.xp_relax:
+
+	
 	return
 
 ###############################################################################

@@ -205,76 +205,76 @@ def make_r2_ij(chains):
 	return
 
 # ポリマー鎖関連の特性情報
-def read_chain():
-	# 初期化
-	# ステップの数に対応した空リストを作成
-	r2_ij = [[] for i in range(val.chain_len)]
-	xp = [[] for i in range(val.chain_len)]
-	# 
-	ba = CognacBasicAnalysis(val.target, val.record)
-	for chain in val.chain_list:
-		mol = chain[0]
+# def read_chain():
+# 	# 初期化
+# 	# ステップの数に対応した空リストを作成
+# 	r2_ij = [[] for i in range(val.chain_len)]
+# 	xp = [[] for i in range(val.chain_len)]
+# 	# 
+# 	ba = CognacBasicAnalysis(val.target, val.record)
+# 	for chain in val.chain_list:
+# 		mol = chain[0]
 		
-		atom = val.uobj.get("Set_of_Molecules.molecule[].atom[]", [mol, chain[1][2]])[1]
+# 		atom = val.uobj.get("Set_of_Molecules.molecule[].atom[]", [mol, chain[1][2]])[1]
 
-		#		
-		for step in range(1, val.chain_len):
-			for start in range(val.chain_len - step):
-				end1 = tuple(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][start]]))
-				end2 = tuple(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][start + step]]))
-				e2e_vec = CU.distanceWithBoundary(end1, end2)
-				e2e_dist = np.linalg.norm(np.array(e2e_vec))
-				r2 = e2e_dist**2
-				r2_ij[step].append(r2)
-				if step == 1:
-					val.bond_list.append(e2e_dist)
-				if step == val.chain_len -1:
-					val.Rx_list.append(e2e_vec[0])
-					val.Ry_list.append(e2e_vec[1])
-					val.Rz_list.append(e2e_vec[2])
-					#
-					val.R_list.append(e2e_dist)
-					# r2_list.append(r2)
-		# gr
-		# cg = CognacGeometryAnalysis(val.target, val.record)
-		# val.gr_list.append(cg.gr([atom]))
+# 		#		
+# 		for step in range(1, val.chain_len):
+# 			for start in range(val.chain_len - step):
+# 				end1 = tuple(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][start]]))
+# 				end2 = tuple(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][start + step]]))
+# 				e2e_vec = CU.distanceWithBoundary(end1, end2)
+# 				e2e_dist = np.linalg.norm(np.array(e2e_vec))
+# 				r2 = e2e_dist**2
+# 				r2_ij[step].append(r2)
+# 				if step == 1:
+# 					val.bond_list.append(e2e_dist)
+# 				if step == val.chain_len -1:
+# 					val.Rx_list.append(e2e_vec[0])
+# 					val.Ry_list.append(e2e_vec[1])
+# 					val.Rz_list.append(e2e_vec[2])
+# 					#
+# 					val.R_list.append(e2e_dist)
+# 					# r2_list.append(r2)
+# 		# gr
+# 		# cg = CognacGeometryAnalysis(val.target, val.record)
+# 		# val.gr_list.append(cg.gr([atom]))
 		
-		# xp
-		pos = []
-		for i in range(val.chain_len):
-			segment = np.array(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][i]]))
-			pos.append(segment)
-		for p in range(val.chain_len):
-			tmp = np.zeros(3)
-			end0 = np.array(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][0]]))
-			end1 = np.array(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][val.chain_len - 1]]))
-			k = np.pi*p/(val.chain_len-1)
-			for i in range(val.chain_len):
-				segment = np.array(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][i]]))
-				tmp += segment*np.cos(k*i)
-			tmp2 = (tmp - (end0 + end1)/2.)/val.chain_len
-			xp[p].append(tmp2)
+# 		# xp
+# 		pos = []
+# 		for i in range(val.chain_len):
+# 			segment = np.array(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][i]]))
+# 			pos.append(segment)
+# 		for p in range(val.chain_len):
+# 			tmp = np.zeros(3)
+# 			end0 = np.array(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][0]]))
+# 			end1 = np.array(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][val.chain_len - 1]]))
+# 			k = np.pi*p/(val.chain_len-1)
+# 			for i in range(val.chain_len):
+# 				segment = np.array(val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][i]]))
+# 				tmp += segment*np.cos(k*i)
+# 			tmp2 = (tmp - (end0 + end1)/2.)/val.chain_len
+# 			xp[p].append(tmp2)
 			
 
-	xp_ave = []
-	for p in range(val.chain_len):
-		xp_ave.append([p, np.average(np.array(xp[p]), axis = 0)])
-		print('cog', ba.Xp(pos, p))
+# 	xp_ave = []
+# 	for p in range(val.chain_len):
+# 		xp_ave.append([p, np.average(np.array(xp[p]), axis = 0)])
+# 		print('cog', ba.Xp(pos, p))
 		
-	val.xp_list.append(xp_ave)
-	print(val.xp_list)
+# 	val.xp_list.append(xp_ave)
+# 	print(val.xp_list)
 
 		
-	# cn
-	cn = []
-	for i in range(1, len(r2_ij)):
-		cn.append([i, np.average(np.array(r2_ij[i]))/(i*val.l_bond**2)])
-	val.cn_list.append(cn)
-	# angle
-	anglename = val.uobj.get("Molecular_Attributes.Angle_Potential[].Name")
-	tmp = np.array(ba.angle(anglename[0]))
-	val.angle_list.extend(list(tmp[~np.isnan(tmp)]))
-	return
+# 	# cn
+# 	cn = []
+# 	for i in range(1, len(r2_ij)):
+# 		cn.append([i, np.average(np.array(r2_ij[i]))/(i*val.l_bond**2)])
+# 	val.cn_list.append(cn)
+# 	# angle
+# 	anglename = val.uobj.get("Molecular_Attributes.Angle_Potential[].Name")
+# 	tmp = np.array(ba.angle(anglename[0]))
+# 	val.angle_list.extend(list(tmp[~np.isnan(tmp)]))
+# 	return
 
 
 
@@ -629,8 +629,21 @@ def multi_script_content():
 		script += 'f(x) w l lw 2 ti "FreeRotationalModel"'
 	elif val.base_name == 'Corr_stress' or val.base_name == 'Corr_stress_mod':
 		script += 'set logscale xy \n\nset format x "10^{%L}" \nset format y "10^{%L}"\n\n'
+		script += f'G={val.nu:}\nfunc={val.func:}\nf1 = (func - 1.)/(func + 1.)\nf2 = 1. - 2./func\n\n'
+		script += 'tau = 10000\nst = 0.1\neq = 0.1\ns = 1000\ne = 100000\n'
+		script += 'g(x) = eq +(st-eq)*exp(-x/tau)\nfit [s:e] g(x) data via st, eq, tau\n\n'
+		script += 'set label 1 sprintf("{/Symbol t} = %.2e", tau) at graph 0.15, 0.3\n'
+		script += 'set label 2 sprintf("{/Symbol s}_{pre} = %.2e", st) at graph 0.15, 0.2\n'
+		script += 'set label 3 sprintf("{/Symbol s}_{eq} = %.2e", eq) at graph 0.15, 0.1\n'
+		script += 'set label 4 "{/Symbol s}_{nom}(t) = {/Symbol s}_{eq}+({/Symbol s}_{pre}-{/Symbol s}_{eq})*exp(-t/{/Symbol t})" at graph 0.25, 0.6\n'
+		script += 'set label 5 sprintf("fitted: %.d to %.d", s, e) at graph 0.5, 0.5\n'
+		script += 'set label 6 sprintf("{/Symbol n}k_BT = %.2e", G) at graph 0.5, 0.4\n\n'
 		script += 'plot '
-		script += 'data w l ti "Stress" \\\n'
+		script += 'data w l ti "Stress", \\\n'
+		script += '[s:e] g(x) w l lw 2 lt 2 ti "fit", \\\n'
+		script += '[1000:] G w l lw 3 dt (10, 5) lt 8 ti "Affin", \\\n'
+		script += '[1000:] G*f1 w l lw 3 dt (10, 5) lt 9 ti "Q. Pht.", \\\n'
+		script += '[1000:] G*f2 w l lw 3 dt (10, 5) lt 7 ti "Phantom"\n\n'
 	elif val.base_name == 'Corr_stress_semi':
 		script += 'set logscale y \n\n#set format x "10^{%L}" \nset format y "10^{%L}"\n\n'
 		script += 'a = 1\ntau =1000\n\ns = 100\ne = 1000\n\n'
@@ -736,7 +749,7 @@ def calc_gk():
 	cond_list = ["Corr_stress_all", corr_all, ['Time', 'sigma', 'ave']]
 	make_multi(cond_list)
 
-	# irheo(corr)
+	irheo(corr)
 	return
 
 def calc_corr():
@@ -769,19 +782,19 @@ def irheo(data_list):
 	# mod = self.modify(data_list)
 	# gt, mod_gt = self.modify_data(mod)
 	#
-	gw = self.calcgw(data_list, minmax, div)
-	self.save_data(gw, 'gw.dat')
+	gw = calcgw(data_list, minmax, div)
+	save_gw_data(gw, 'gw.dat')
 	#
 	# self.save_data(data_list, 'modified.dat')
 	# self.plotgtgw('modified.dat')
 	# cmd = "corr2gw < modified.dat > gw.dat"
 	# subprocess.call(cmd, shell=True)
 
-	self.plotgtgw('gw.dat')
+	plotgtgw('gw.dat')
 	#
 	return
 
-def modify_data(self, data_list):
+def modify_data(data_list):
 	fine_div = 100
 	#
 	glist = []
@@ -806,19 +819,19 @@ def modify_data(self, data_list):
 	#
 	return gt, mod_gt
 
-def calcgw(self, gt, minmax, div):
+def calcgw(gt, minmax, div):
 	gw = []
 	mag = math.log10(minmax[0])
 	while mag < math.log10(minmax[1]):
 		for i in range(div):
 			omega = 10**(mag+i/div)
-			gstar = self.gs(gt, omega)
+			gstar = gs(gt, omega)
 			gw.append([omega, gstar.real, abs(gstar.imag)])
 		mag += 1
 	#
 	return gw
 
-def gs(self, gt, omega):
+def gs(gt, omega):
 	gstar = gt[0][1] + (1 - cmath.exp(-1j*omega*gt[1][0]))*(gt[1][1] - gt[0][1])/gt[1][0]/(1j*omega)
 	for k in range(len(gt) - 2):
 		gstar += (gt[k+2][1] - gt[k+1][1])*(cmath.exp(-1j*omega*gt[k+1][0]) - cmath.exp(-1j*omega*gt[k+2][0]))/(gt[k+2][0] - gt[k+1][0])/(1j*omega)
@@ -826,7 +839,7 @@ def gs(self, gt, omega):
 	return gstar 
 
 #----- 計算結果をターゲットファイル名で保存
-def save_data(self, target, f_data):
+def save_gw_data(target, f_data):
 	with open(f_data,'w') as f:
 		for line in target:
 			for data in line:
@@ -835,8 +848,8 @@ def save_data(self, target, f_data):
 	return
 
 #----- 結果をプロット
-def plotgtgw(self, f_data):
-	plt = self.make_gtgw(f_data)
+def plotgtgw(f_data):
+	plt = make_gtgw(f_data)
 	#
 	if platform.system() == "Windows":
 		subprocess.call([plt], shell=True)
@@ -845,15 +858,15 @@ def plotgtgw(self, f_data):
 	return
 
 # 必要なスクリプトを作成
-def make_gtgw(self, f_data):
-	script = self.gtgw_content(f_data)
+def make_gtgw(f_data):
+	script = gtgw_content(f_data)
 	plt = f_data.replace('dat', 'plt')
 	with open(plt, 'w') as f:
 		f.write(script)
 	return plt
 
 # スクリプトの中身
-def gtgw_content(self, f_data):
+def gtgw_content(f_data):
 	out_png = f_data.replace('dat', 'png')
 	script = 'set term pngcairo font "Arial,14"\n\n'
 	script += 'set colorsequence classic\n\n'
@@ -886,7 +899,7 @@ def gtgw_content(self, f_data):
 
 	return script
 
-def modify(self, data_list):
+def modify(data_list):
 	a = 0.057
 	tau = 190
 	fitstart = 500

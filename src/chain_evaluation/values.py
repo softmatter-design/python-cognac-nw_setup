@@ -25,7 +25,7 @@ Rz_list = []
 R_list = []
 #
 p_max = 1
-xp_ave = []
+# xp_ave = []
 xp_list = []
 xp_relax = []
 gr_list = []
