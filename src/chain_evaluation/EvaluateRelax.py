@@ -235,7 +235,7 @@ def xp_calc():
 				tmp += segment*np.cos(k*i)
 			tmp_xp = (tmp - (end0 + end1)/2.)/val.chain_len
 			xp[p].append(tmp_xp)
-			if p == 2:
+			if p == 1:
 				CU.pushVector(str(chn_id), tuple(tmp_xp))
 	val.xp_list.append(xp)
 	return
@@ -325,13 +325,18 @@ def calc_xp_relax():
 	######
 	tmp=[]
 	for chn_id, chain in enumerate(val.chain_list):
-		tmp.append(CU.vectorCorrelation(str(chn_id)))
-
-	vec = tmp[0]
-	ss = np.sum(vec[0])
-	x0, y0, z0 = vec[0]
-	results = [ (val.delta_t*i, np.sum(vec[i])/ss, (vec[i][0]/x0, vec[i][1]/y0, vec[i][2]/z0)) for i in range(len(vec)) ]
-	print(results)
+		vec = CU.vectorCorrelation(str(chn_id))
+		ss = np.sum(vec[0])
+		x0, y0, z0 = vec[0]
+		tmp.append([(val.delta_t*i, np.sum(vec[i])/ss, (vec[i][0]/x0, vec[i][1]/y0, vec[i][2]/z0)) for i in range(len(vec))])
+	ttt = np.array(tmp)
+	for i in range(len(ttt[0])):
+		time = ttt[:,i][0][0]
+		data = ttt[:,i][0][1]
+		print(time, data)
+		print(ttt[:,i][:,0])
+		print(np.average(ttt[:,i][:,1]))
+		print()
 	#####
 
 
