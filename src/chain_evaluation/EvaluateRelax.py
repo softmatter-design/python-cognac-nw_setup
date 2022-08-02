@@ -184,6 +184,7 @@ def make_r2_ij():
 	CU.setCell(tuple(val.uobj.get("Structure.Unit_Cell.Cell_Size")))
 	# ステップの数に対応した空リストを作成
 	r2_ij = [[] for i in range(val.chain_len)]
+	ba = CognacBasicAnalysis(val.target, val.record)
 
 	for chain in val.chains:
 		for step in range(1, val.chain_len):
@@ -191,7 +192,10 @@ def make_r2_ij():
 				end1 = tuple(chain[start])
 				end2 = tuple(chain[start + step])
 				e2e_vec =  CU.distanceWithBoundary(end1, end2)
+				eee = ba.distance(end1, end2)
 				e2e_dist = np.linalg.norm(np.array(e2e_vec))
+				if eee - e2e_dist > 0.1:
+					print('long')
 				r2 = e2e_dist**2
 				r2_ij[step].append(r2)
 				if step == 1:
@@ -209,7 +213,7 @@ def make_r2_ij():
 		cn.append([i, np.average(np.array(r2_ij[i]))/(i*val.l_bond**2)])
 	val.cn_list.append(cn)
 
-	ba = CognacBasicAnalysis(val.target, val.record)	
+		
 	# angle
 	anglename = val.uobj.get("Molecular_Attributes.Angle_Potential[].Name")
 	tmp = np.array(ba.angle(anglename[0]))
@@ -218,6 +222,8 @@ def make_r2_ij():
 
 # ポリマー鎖関連の特性情報
 def xp_calc():
+	bound_setup()
+	CU.setCell(tuple(val.uobj.get("Structure.Unit_Cell.Cell_Size")))
 	xp = [[] for i in range(val.p_max)]
 	for chn_id, chain in enumerate(val.chain_list):
 		mol = chain[0]
@@ -334,8 +340,8 @@ def calc_xp_relax():
 		time = ttt[:,i][0][0]
 		data = ttt[:,i][0][1]
 		print(time, data)
-		print(ttt[:,i][:,0])
-		print(np.average(ttt[:,i][:,1]))
+		# print(ttt[:,i][:,0])
+		# print(np.average(ttt[:,i][:,1]))
 		print()
 	#####
 
