@@ -154,7 +154,8 @@ def eval_chain():
 	for val.record in range(1, rec_size):
 		print("Reading Rec=", val.record, '/', rec_size - 1)
 		val.uobj.jump(val.record)
-		make_chains()
+		pos_all = val.uobj.get("Structure.Position.mol[].atom[]")
+		make_chains(pos_all)
 		#
 		# make_r2_ij()
 		#
@@ -169,13 +170,12 @@ def eval_chain():
 	# 	calc_gk()
 	return
 
-def make_chains():
+def make_chains(pos_all):
 	for chain in val.chain_list:
 		mol = chain[0]
 		tmp = []
 		for atom in range(val.chain_len):
-			segment = val.uobj.get("Structure.Position.mol[].atom[]", [mol, chain[1][atom]])
-			tmp.append(segment)
+			tmp.append(pos_all[mol][chain[1][atom]])
 		val.chains.append(tmp)
 	return
 
