@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='nw_setup',
-    version='0.4.0',
+    version='0.5.1',
     license='proprietary',
     description='Module Experiment',
 
@@ -18,7 +18,7 @@ setup(
         "console_scripts": [
           'nw_setup = nw_setup.nw_setup:main',
           'evaluate_nw = chain_evaluation.evaluate_all:evaluate',
-          'evaluate_relax = chain_evaluation.relax:evaluate_relax'
+          'calc_relax = trajectory.relax:main'
         ]
     }
 )
