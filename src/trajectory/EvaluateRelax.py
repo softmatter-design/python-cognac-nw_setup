@@ -61,7 +61,7 @@ def read_all():
 	# 計算対象の条件を読み取る
 	if not os.access('target_condition.udf', os.R_OK):
 		print("'target_condition.udf' is not exists.")
-		exit(1)
+		var.nw_type = 'homo'
 	else:
 		cond_u = UDFManager('target_condition.udf')
 		var.nw_type = cond_u.get('TargetCond.Model.TargetModel')
@@ -71,12 +71,28 @@ def read_all():
 		var.cn = cond_u.get('TargetCond.Strand.Characteristic_Ratio')
 		var.nu = cond_u.get('TargetCond.System.Nu')
 	# ネットワークストランドのリストを作成
-	make_chain_list()
+	if var.nw_type == 'homo':
+		var.molname = 'polymerA'
+		make_chain_list_homo()
+	else:
+		var.molname = 'strand'
+		make_chain_list_nw()
 	var.chain_len = len(var.chain_list[0][1])
 	return
 
+def make_chain_list_homo():
+	for m, atoms in enumerate(var.uobj.get('Set_of_Molecules.molecule[]')):
+		tmp = []
+		if var.uobj.get("Set_of_Molecules.molecule[].Mol_Name",[m]) == var.molname:
+			for i in range(len(atoms[1])):
+				tmp.append(i)
+			var.chain_list.append([m, tmp])
+	if len(var.chain_list) == 0:
+		print('no molecule with Mol_Name: ' + var.molname)
+	return
+
 # 架橋点およびストランドの構成アトムのリスト
-def make_chain_list():
+def make_chain_list_nw():
 	jp_list = make_jp_list()
 	#
 	jp_pair_list = []
@@ -144,16 +160,14 @@ def make_jp_pair(target_jp):
 def evaluate_xp():
 	
 	time()
-	molname = "strand"
-	make_chainList(molname, 'Xp')
-	# p = 1
-	# cp = normalCoordinate(p)
-	# ndata = len(cp)
+	make_chainKey('Xp')
+	p = 1
+	cp = normalCoordinate(p)
+	ndata = len(cp)
 
-	# for i in range(0, ndata):
-	# 	var.xp_data.append([cp[i][0],cp[i][1],cp[i][2][0],cp[i][2][1],cp[i][2][2] ])
+	for i in range(0, ndata):
+		var.xp_data.append([cp[i][0],cp[i][1],cp[i][2][0],cp[i][2][1],cp[i][2][2] ])
 	return
-
 
 #----- utility functions -----
 def time():
@@ -170,41 +184,24 @@ def time():
 			var.timeList.append(time - startTime)
 	return
 
-def make_chainList(molname, suffix=None):
-	'''list of molecules having the specifiled molname
-
-	Args:
-		molname (str): name of the molecules to be selected
-		suffix (str): suffix to be added to the 'key'
-
-	Returns:
-		list [(molIndex, key), ...]
-		where key = 'molname:molIndex:suffix'
-	'''
+def make_chainKey(suffix=None):
 	key = '{}:{}'
 	if suffix != None:
 		key += ':' + suffix
-	
-	for m, atoms in enumerate(var.uobj.get('Set_of_Molecules.molecule[]')):
-		tmp = []
-		if var.uobj.get("Set_of_Molecules.molecule[].Mol_Name",[m]) == molname:
-			for i in range(len(atoms[1])):
-				tmp.append(i)
-			var.chainList.append((m, key.format(molname, m)))
-			var.chainAtom.append([m, tmp])
-	if len(var.chainList) == 0:
-		print('no molecule with Mol_Name: ' + molname)
+	for m in range(len(var.chain_list)):
+		var.chainKey.append((m, key.format(var.molname, m)))
 	return
 
-
 def normalCoordinate(p=1):
+	bound_setup()
+	cu.setCell(tuple(var.uobj.get("Structure.Unit_Cell.Cell_Size")))
 	cu.clearVectorMap()
 	for rec in var.timeRecord:
 		var.uobj.jump(rec)
-		pos_list = tuple(var.uobj.get("Structure.Position.mol[].atom[]"))
-		chainatom_pos = make_chains(pos_list)
-		for m, key in var.chainList:
-			# pos = np.array(pos_list[m])
+
+		chainatom_pos = make_chains()
+		
+		for m, key in var.chainKey:
 			pos = np.array(chainatom_pos[m])
 			cu.pushVector(key, Xp(pos, p))
 
@@ -215,12 +212,13 @@ def normalCoordinate(p=1):
 					for i in range(len(CpAve)) ]
 	return results
 
-def make_chains(pos_list):
+def make_chains():
+	pos_list = tuple(var.uobj.get("Structure.Position.mol[].atom[]"))
 	chainatom_pos = []
-	for chain in var.chainAtom:
+	for chain in var.chain_list:
 		mol = chain[0]
 		pos = []
-		for atom in range(len(var.chainAtom[mol][1])):
+		for atom in chain[1]:
 			segment = pos_list[mol][atom]
 			pos.append(segment)
 		chainatom_pos.append(pos)
@@ -230,10 +228,33 @@ def Xp(pos, p=1):
 	N = len(pos)
 	k = np.pi*p/N
 	xp = np.zeros(3)
+	# prev = cu.positionWithBoundary(pos[0])
 	for n in range(N):
-		xp += np.cos(k*(n+0.5))*pos[n]
+		pres = cu.positionWithBoundary(pos[n])
+		xp += np.cos(k*(n+0.5))*np.array(pres)
+		# e2e_vec = cu.distanceWithBoundary(pres, prev)
+		# e2e_dist = np.linalg.norm(np.array(e2e_vec))
+		# if e2e_dist > 1.2:
+		# 	print(e2e_dist)
+		# prev = pres
 	return tuple(xp/N)
 
+# 周期境界条件の設定
+def bound_setup():
+	axis = var.uobj.get("Simulation_Conditions.Boundary_Conditions")
+	boundarylist = [0,0,0]
+	#
+	for i in range(0,3):
+		if axis[i] == "NONE" :
+			boundarylist[i] = 0
+		elif axis[i] == "PERIODIC" :
+			boundarylist[i] = 1
+		elif axis[i] == "REFLECTIVE1" :
+			boundarylist[i] = 2
+		elif axis[i] == "REFLECTIVE2" :
+			boundarylist[i] = 3
+	cu.setBoundary(tuple(boundarylist))
+	return
 
 
 ###############################################################################
@@ -445,10 +466,16 @@ def multi_script_content():
 	script += '#\nset xlabel "' + var.leg[0] + '"\nset ylabel "' + var.leg[1] + '"\n\n'
 	#
 	if var.base_name == "Xp":
+		script += 'a = .5\ntau =10000\n\ns = 10000\ne = 15000\n\n'
+		script += 'f(x) = a*exp(-1*x/tau) \n'
+		script += 'fit [s:e] f(x) data usi 1:2 via a,tau\n\n'
+		script += 'set label 1 sprintf("Fitted \\nA = %.1e \\n{/Symbol t} = %.1e \\nFitting Region: %d to %d", a, tau, s, e) at graph 0.35, 0.75\n\n'
+		script += 'set logscale y \n\nset format y "10^{%L}"\n\n'
 		script += 'plot data u 1:2 w l ti "Xp-ave.", \\\n'
 		script += 'data u 1:3 w l ti "Xp-x", \\\n'
 		script += 'data u 1:4 w l ti "Xp-y", \\\n'
-		script += 'data u 1:5 w l ti "Xp-z"\n\nreset'
+		script += 'data u 1:4 w l ti "Xp-z", \\\n'
+		script += '[s:e] f(x) lw 3"\n\nreset'
 
 	elif var.base_name == 'Corr_stress' or var.base_name == 'Corr_stress_mod':
 		script += 'set logscale xy \n\nset format x "10^{%L}" \nset format y "10^{%L}"\n\n'

@@ -9,11 +9,13 @@ l_bond= 0.
 cn = 0.
 nu = 0.
 
+molname = ''
+
 timeRecord =[]
 timeList = []
 
-chainList = []
-chainAtom = []
+
+# chainAtom = []
 
 xp_data =[]
 
@@ -30,7 +32,8 @@ f_png = ''
 
 chain_list = []
 chain_len = 1
-chains = []
+# chains = []
+chainKey = []
 
 # record = 1
 # bond_list = []
