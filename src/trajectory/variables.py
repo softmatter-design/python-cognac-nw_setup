@@ -18,6 +18,7 @@ timeList = []
 # chainAtom = []
 
 xp_data =[]
+cellsize = []
 
 base_name = ''
 data_list = []

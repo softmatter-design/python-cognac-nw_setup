@@ -61,7 +61,7 @@ def read_all():
 	# 計算対象の条件を読み取る
 	if not os.access('target_condition.udf', os.R_OK):
 		print("'target_condition.udf' is not exists.")
-		var.nw_type = 'homo'
+		# var.nw_type = 'homo'
 	else:
 		cond_u = UDFManager('target_condition.udf')
 		var.nw_type = cond_u.get('TargetCond.Model.TargetModel')
@@ -194,7 +194,8 @@ def make_chainKey(suffix=None):
 
 def normalCoordinate(p=1):
 	bound_setup()
-	cu.setCell(tuple(var.uobj.get("Structure.Unit_Cell.Cell_Size")))
+	var.cellsize = var.uobj.get("Structure.Unit_Cell.Cell_Size")
+	cu.setCell(tuple(var.cellsize))
 	cu.clearVectorMap()
 	for rec in var.timeRecord:
 		var.uobj.jump(rec)
@@ -228,15 +229,18 @@ def Xp(pos, p=1):
 	N = len(pos)
 	k = np.pi*p/N
 	xp = np.zeros(3)
-	# prev = cu.positionWithBoundary(pos[0])
+
+	prev = cu.positionWithBoundary(pos[0])
+
 	for n in range(N):
 		pres = cu.positionWithBoundary(pos[n])
 		xp += np.cos(k*(n+0.5))*np.array(pres)
-		# e2e_vec = cu.distanceWithBoundary(pres, prev)
-		# e2e_dist = np.linalg.norm(np.array(e2e_vec))
-		# if e2e_dist > 1.2:
-		# 	print(e2e_dist)
-		# prev = pres
+
+		e2e_vec = cu.distanceWithBoundary(pres, prev)
+		e2e_dist = np.linalg.norm(np.array(e2e_vec))
+		if e2e_dist > 1.2:
+			print(e2e_dist)
+		prev = pres
 	return tuple(xp/N)
 
 # 周期境界条件の設定
@@ -469,12 +473,12 @@ def multi_script_content():
 		script += 'a = .5\ntau =10000\n\ns = 10000\ne = 15000\n\n'
 		script += 'f(x) = a*exp(-1*x/tau) \n'
 		script += 'fit [s:e] f(x) data usi 1:2 via a,tau\n\n'
-		script += 'set label 1 sprintf("Fitted \\nA = %.1e \\n{/Symbol t} = %.1e \\nFitting Region: %d to %d", a, tau, s, e) at graph 0.35, 0.75\n\n'
+		script += 'set label 1 sprintf("Fitted \\nA = %.1e \\n{/Symbol t} = %.1e \\nFitting Region: %d to %d", a, tau, s, e) at graph 0.15, 0.4\n\n'
 		script += 'set logscale y \n\nset format y "10^{%L}"\n\n'
 		script += 'plot data u 1:2 w l ti "Xp-ave.", \\\n'
 		script += 'data u 1:3 w l ti "Xp-x", \\\n'
 		script += 'data u 1:4 w l ti "Xp-y", \\\n'
-		script += 'data u 1:4 w l ti "Xp-z", \\\n'
+		script += 'data u 1:5 w l ti "Xp-z", \\\n'
 		script += '[s:e] f(x) lw 3"\n\nreset'
 
 	elif var.base_name == 'Corr_stress' or var.base_name == 'Corr_stress_mod':
