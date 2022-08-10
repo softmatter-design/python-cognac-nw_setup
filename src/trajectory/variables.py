@@ -15,8 +15,7 @@ timeRecord =[]
 timeList = []
 
 
-# chainAtom = []
-
+pmax = 5
 xp_data =[]
 cellsize = []
 
@@ -33,7 +32,6 @@ f_png = ''
 
 chain_list = []
 chain_len = 1
-# chains = []
 chainKey = []
 
 # record = 1

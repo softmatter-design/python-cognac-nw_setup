@@ -71,6 +71,7 @@ def read_all():
 		var.cn = cond_u.get('TargetCond.Strand.Characteristic_Ratio')
 		var.nu = cond_u.get('TargetCond.System.Nu')
 	# ネットワークストランドのリストを作成
+	print('making chain list')
 	if var.nw_type == 'homo':
 		var.molname = 'polymerA'
 		make_chain_list_homo()
@@ -161,12 +162,15 @@ def evaluate_xp():
 	
 	time()
 	make_chainKey('Xp')
-	p = 1
-	cp = normalCoordinate(p)
-	ndata = len(cp)
-
-	for i in range(0, ndata):
-		var.xp_data.append([cp[i][0],cp[i][1],cp[i][2][0],cp[i][2][1],cp[i][2][2] ])
+	var.xp_data = [[] for i in range(var.pmax +1)]
+	for p in range(1, var.pmax +1):
+		print(f"calculating p={p}")
+		cp = normalCoordinate(p)
+		ndata = len(cp)
+		tmp = []
+		for i in range(0, ndata):
+			tmp.append([cp[i][0],cp[i][1],cp[i][2][0],cp[i][2][1],cp[i][2][2] ])
+		var.xp_data[p] = tmp
 	return
 
 #----- utility functions -----
@@ -267,7 +271,8 @@ def bound_setup():
 def make_output():
 	# マルチ形式での出力
 	multi_list = [
-			["Xp", var.xp_data, ['time', 'AutoCorr.']],
+			[f"Xp_{i}", var.xp_data[i], ['time', 'AutoCorr.']]
+			for i in range(1,var.pmax +1)
 			]
 	for cond in multi_list:
 		make_multi(cond)
@@ -428,7 +433,7 @@ def make_multi(cond_list):
 def write_multi_data():
 	os.makedirs(var.target_dir, exist_ok=True)
 	with open(os.path.join(var.target_dir, var.f_dat), 'w') as f:
-		if var.base_name == 'Xp':
+		if 'Xp' in var.base_name:
 			f.write("# time\tCp\tCp_x\tCp_y\tCp_z\n\n")
 			for line in var.data_list:
 				for data in line:
@@ -469,7 +474,7 @@ def multi_script_content():
 	script += '#\nset size square\nset xrange [0:]\nset yrange [0:]\n'
 	script += '#\nset xlabel "' + var.leg[0] + '"\nset ylabel "' + var.leg[1] + '"\n\n'
 	#
-	if var.base_name == "Xp":
+	if 'Xp' in var.base_name:
 		script += 'a = .5\ntau =10000\n\ns = 10000\ne = 15000\n\n'
 		script += 'f(x) = a*exp(-1*x/tau) \n'
 		script += 'fit [s:e] f(x) data usi 1:2 via a,tau\n\n'
