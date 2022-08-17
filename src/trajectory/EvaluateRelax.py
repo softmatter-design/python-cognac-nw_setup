@@ -165,11 +165,11 @@ def evaluate_xp():
 	var.xp_data = [[] for i in range(var.pmax +1)]
 	for p in range(1, var.pmax +1):
 		print(f"calculating p={p}")
-		cp = normalCoordinate(p)
+		cp, mod_ave, mod_x, mod_y, mod_z = normalCoordinate(p)
 		ndata = len(cp)
 		tmp = []
 		for i in range(0, ndata):
-			tmp.append([cp[i][0],cp[i][1],cp[i][2][0],cp[i][2][1],cp[i][2][2] ])
+			tmp.append([cp[i][0],cp[i][1],cp[i][2][0],cp[i][2][1],cp[i][2][2],mod_ave[i],mod_x[i], mod_y[i], mod_z[i] ])
 		var.xp_data[p] = tmp
 	return
 
@@ -196,7 +196,7 @@ def make_chainKey(suffix=None):
 		var.chainKey.append((m, key.format(var.molname, m)))
 	return
 
-def normalCoordinate(p=1):
+def normalCoordinate(p):
 	bound_setup()
 	var.cellsize = var.uobj.get("Structure.Unit_Cell.Cell_Size")
 	cu.setCell(tuple(var.cellsize))
@@ -215,7 +215,22 @@ def normalCoordinate(p=1):
 	x0, y0, z0 = CpAve[0]
 	results = [ (var.timeList[i], np.sum(CpAve[i])/S, (CpAve[i][0]/x0, CpAve[i][1]/y0, CpAve[i][2]/z0)) 
 					for i in range(len(CpAve)) ]
-	return results
+
+
+	col_ave = [ np.sum(CpAve[i])/S for i in range(len(CpAve)) ]
+	col_x = [ CpAve[i][0]/x0 for i in range(len(CpAve)) ]
+	col_y = [ CpAve[i][1]/y0 for i in range(len(CpAve)) ]
+	col_z = [ CpAve[i][2]/z0 for i in range(len(CpAve)) ]
+
+	mod_ave = signal.savgol_filter(col_ave, 11, 3)
+	mod_x = signal.savgol_filter(col_x, 11, 3)
+	mod_y = signal.savgol_filter(col_y, 11, 3)
+	mod_z = signal.savgol_filter(col_z, 11, 3)
+
+
+
+
+	return results, mod_ave, mod_x, mod_y, mod_z
 
 def make_chains():
 	pos_list = tuple(var.uobj.get("Structure.Position.mol[].atom[]"))
@@ -242,7 +257,7 @@ def Xp(pos, p=1):
 
 		e2e_vec = cu.distanceWithBoundary(pres, prev)
 		e2e_dist = np.linalg.norm(np.array(e2e_vec))
-		if e2e_dist > 1.2:
+		if e2e_dist > 1.3:
 			print(e2e_dist)
 		prev = pres
 	return tuple(xp/N)
