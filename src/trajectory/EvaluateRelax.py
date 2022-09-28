@@ -490,16 +490,14 @@ def multi_script_content():
 	script += '#\nset xlabel "' + var.leg[0] + '"\nset ylabel "' + var.leg[1] + '"\n\n'
 	#
 	if 'Xp' in var.base_name:
-		script += 'a = .5\ntau =10000\n\ns = 10000\ne = 15000\n\n'
+		script += 'a = .5\ntau =10000\nconst = 0.1\n\ns = 10000\ne = 20000\n\n'
 		script += 'f(x) = a*exp(-1*x/tau) \n'
-		script += 'fit [s:e] f(x) data usi 1:2 via a,tau\n\n'
+		script += 'fit [s:e] f(x) data usi 1:($2-const) via a,tau\n\n'
 		script += 'set label 1 sprintf("Fitted \\nA = %.1e \\n{/Symbol t} = %.1e \\nFitting Region: %d to %d", a, tau, s, e) at graph 0.15, 0.4\n\n'
 		script += 'set logscale y \n\nset format y "10^{%L}"\n\n'
 		script += 'plot data u 1:2 w l ti "Xp-ave.", \\\n'
-		script += 'data u 1:3 w l ti "Xp-x", \\\n'
-		script += 'data u 1:4 w l ti "Xp-y", \\\n'
-		script += 'data u 1:5 w l ti "Xp-z", \\\n'
-		script += '[s:e] f(x) lw 3"\n\nreset'
+		script += 'data u 1:($2-const) w l ti "modified", \\\n'
+		script += '[s:e] f(x) lw 3 noti\n\nreset'
 
 	elif var.base_name == 'Corr_stress' or var.base_name == 'Corr_stress_mod':
 		script += 'set logscale xy \n\nset format x "10^{%L}" \nset format y "10^{%L}"\n\n'
