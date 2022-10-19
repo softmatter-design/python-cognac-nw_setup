@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 ################################################################################
 # from ast import arg
-import re
+# import re
 import numpy as np
 import copy
 import random
@@ -13,62 +13,57 @@ import os
 import pickle
 import multiprocessing as mp
 from UDFManager import UDFManager
+import nw_setup.variables as var
 ################################################################################
 #
-def select_set(nw_cond, sim_cond2, rnd_cond, target_dir):
-	nw_model = nw_cond[0]
+def select_set():
 	# ネットワークを設定
-	if nw_model == "Regular":
-		calcd_data_dic = regnw_setup(nw_cond, sim_cond2)
-	elif nw_model == "Random":
-		calcd_data_dic = rndnw_setup(nw_cond, sim_cond2, rnd_cond, target_dir)
+	if var.nw_model == "Regular":
+		calcd_data_dic = regnw_setup()
+	elif var.nw_model == "Random":
+		calcd_data_dic = rndnw_setup()
 
 	return calcd_data_dic
 
 #######################################
-def regnw_setup(nw_cond, sim_cond2):
-	calcd_data_dic = calc_all(nw_cond, sim_cond2)
+def regnw_setup():
+	calcd_data_dic = calc_regnw()
 	return calcd_data_dic
 
-def rndnw_setup(nw_cond, sim_cond2, rnd_cond, target_dir):
-	multi = sim_cond2[0]
+def rndnw_setup():
+	base_top_list = make_8chain_dic()
 
-	restart = rnd_cond[0] 
-	cond_top = rnd_cond[1]
-	hist_bin = rnd_cond[2]
-	base_top_list = make_8chain_dic(nw_cond)
-
-	if restart == '':
+	if var.restart == '':
 		# トポロジーの異なるネットワークを探索して、任意の多重度のネットワークポリマーの代数的連結性の分布関数を策定
-		candidate_list, random_dir = top_search(nw_cond, cond_top, base_top_list)
+		candidate_list, random_dir = top_search(base_top_list)
 	else:
 		# 設定したリスタートファイルを読み込んで、リストを作成
-		candidate_list, random_dir = top_select(restart)
+		candidate_list, random_dir = top_select()
 
-	top_dic_list = nw_search(candidate_list, random_dir, hist_bin, multi, target_dir)
+	top_dic_list = nw_search(candidate_list, random_dir)
 
 	###########################################
 	# ターゲットとなるネットワーク全体の辞書を設定。
-	calcd_data_dic = make_data_dic(nw_cond, base_top_list, top_dic_list)
+	calcd_data_dic = make_data_dic(base_top_list, top_dic_list)
 	return calcd_data_dic
+
 
 
 ################################################
 ## REGULAR NW SETUP
 ################################################
-def calc_all(nw_cond, sim_cond2):
+def calc_regnw():
 	# 架橋点 JP を設定
-	jp_xyz, strand_se_xyz = calc_jp_strands(nw_cond)
+	jp_xyz, strand_se_xyz = calc_jp_strands()
 	#
-	calcd_data_dic = set_atom(sim_cond2, nw_cond, jp_xyz, strand_se_xyz)
+	calcd_data_dic = set_atom(jp_xyz, strand_se_xyz)
 	return calcd_data_dic
 ##########################################
 # JPおよびサブチェインの始点と終点のXYZを設定
-def calc_jp_strands(nw_cond):
-	strand = nw_cond[1]
+def calc_jp_strands():
 	# jp_xyz は、JPの座標のリスト
 	# strand_se_xyz は、サブチェインの出発点と終点のリスト
-	if strand == "3_Chain_S":
+	if var.strand == "3_Chain_S":
 		# JPを設定
 		jp_xyz = [
 		[
@@ -100,7 +95,7 @@ def calc_jp_strands(nw_cond):
 		]
 		]
 
-	elif strand == "3_Chain_D":
+	elif var.strand == "3_Chain_D":
 		# JPを設定
 		jp_xyz = [
 		[
@@ -156,7 +151,7 @@ def calc_jp_strands(nw_cond):
 		]
 		]
 
-	elif strand == "4_Chain":
+	elif var.strand == "4_Chain":
 		# JPを設定
 		jp_xyz = [
 		[
@@ -192,7 +187,7 @@ def calc_jp_strands(nw_cond):
 		]
 		]
 
-	elif strand == "6_Chain":
+	elif var.strand == "6_Chain":
 		# JPを設定
 		jp_xyz = [
 		[
@@ -208,7 +203,7 @@ def calc_jp_strands(nw_cond):
 		]
 		]
 
-	elif strand == "8_Chain":
+	elif var.strand == "8_Chain":
 		# JPを設定
 		jp_xyz = [
 		[
@@ -233,27 +228,18 @@ def calc_jp_strands(nw_cond):
 	return jp_xyz, strand_se_xyz
 
 #########################################################
-def set_atom(sim_cond2, nw_cond, jp_xyz, strand_se_xyz):
-	multi = sim_cond2[0]
-
-	n_segments = nw_cond[3]
-	n_cell = nw_cond[4]
-	n_sc = nw_cond[5]
-
+def set_atom(jp_xyz, strand_se_xyz):
 	calcd_data_dic={}
-
-	for mul in (range(multi)):
-		# atom_all = []
-		# pos_all = {}
-		for mol, jp in enumerate(jp_xyz):
+	for mul in (range(var.multi_mod)):
+		for mol, jp_each in enumerate(jp_xyz):
 			atom_all = []
 			pos_all = {}
 			# システム全体にわたるジャンクションポイントのxyzとIDの辞書を作成
-			jp_id_dic, jp_xyz_dic, atom_jp = set_jp_id_reg(jp, n_cell)
+			jp_id_dic, jp_xyz_dic, atom_jp = set_jp_id_reg(jp_each)
 			atom_all.extend(atom_jp)
 			pos_all.update(jp_xyz_dic)
 			# サブチェイン中の各アトムのxyzリストとボンドリストを作成
-			strand_xyz, bond_all, atom_sc, angle_all = set_strands(jp_id_dic, strand_se_xyz[mol], n_cell, n_segments, n_sc)
+			strand_xyz, bond_all, atom_sc, angle_all = set_strands(jp_id_dic, strand_se_xyz[mol])
 			#
 			atom_all.extend(atom_sc)
 			pos_all.update(strand_xyz)
@@ -263,16 +249,16 @@ def set_atom(sim_cond2, nw_cond, jp_xyz, strand_se_xyz):
 
 ###################################################
 # システム全体にわたるJPのxyzとIDの辞書を作成
-def set_jp_id_reg(jp_xyz, n_cell):
+def set_jp_id_reg(jp_each):
 	jp_id_dic = {}
 	jp_xyz_dic = {}
 	atom_jp = []
 	jp_id = 0
-	for z in range(n_cell):
-		for y in range(n_cell):
-			for x in range(n_cell):
+	for z in range(var.n_cell):
+		for y in range(var.n_cell):
+			for x in range(var.n_cell):
 				base_xyz = np.array([x,y,z])
-				for jp in jp_xyz:
+				for jp in jp_each:
 					jp_id_dic[tuple(np.array(jp) + base_xyz)] = (jp_id)
 					jp_xyz_dic[(jp_id)] = tuple(np.array(jp) + base_xyz)
 					atom_jp.append([jp_id, 0, 0])
@@ -281,19 +267,19 @@ def set_jp_id_reg(jp_xyz, n_cell):
 
 #########################################################
 # サブチェイン中の各アトムのxyzリストとボンドリストを作成
-def set_strands(jp_id_dic, strand_se_xyz, n_cell, n_segments, n_sc):
+def set_strands(jp_id_dic, strand_se_xyz):
 	strand_xyz = {}
 	bond_all = {}
 	atom_sc = []
 	angle_all = []
 	sub_id = len(jp_id_dic)
 	bond_id = 0
-	for z in range(n_cell):
-		for y in range(n_cell):
-			for x in range(n_cell):
+	for z in range(var.n_cell):
+		for y in range(var.n_cell):
+			for x in range(var.n_cell):
 				b_xyz = (x,y,z)
 				for se_xyz in strand_se_xyz:
-					tmp_xyz, tmp_bond, new_sub_id, new_bond_id, tmp_atom_sc, tmp_angle = calc_single_strand_reg(jp_id_dic, sub_id, bond_id, b_xyz, se_xyz, n_segments, n_cell, n_sc)
+					tmp_xyz, tmp_bond, new_sub_id, new_bond_id, tmp_atom_sc, tmp_angle = calc_single_strand_reg(jp_id_dic, sub_id, bond_id, b_xyz, se_xyz)
 					strand_xyz.update(tmp_xyz)
 					bond_all.update(tmp_bond)
 					atom_sc.extend(tmp_atom_sc)
@@ -304,7 +290,7 @@ def set_strands(jp_id_dic, strand_se_xyz, n_cell, n_segments, n_sc):
 
 ###############################################################
 # 一本のサブチェイン中の各アトムのxyzリストとボンドリストを作成
-def calc_single_strand_reg(jp_id_dic, sub_id, bond_id, b_xyz, se_xyz, n_segments, n_cell, n_sc):
+def calc_single_strand_reg(jp_id_dic, sub_id, bond_id, b_xyz, se_xyz):
 	tmp_xyz = {}
 	tmp_bond = {}
 	tmp_angle = []
@@ -315,28 +301,28 @@ def calc_single_strand_reg(jp_id_dic, sub_id, bond_id, b_xyz, se_xyz, n_segments
 	end_xyz = np.array(se_xyz[1]) + bas_xyz
 	vec = end_xyz - start_xyz
 	# ストランドの鎖長分のループ処理
-	unit_len = 1./(n_segments + 1)
+	unit_len = 1./(var.n_segments + 1)
 	ortho_vec = find_ortho_vec(vec)
 	mod_o_vec = np.linalg.norm(vec)*ortho_vec
 	# 始点のアトムのIDを設定
 	mod_xyz = list(start_xyz)[:]
 	for dim in range(3):
-		if mod_xyz[dim] == n_cell:
+		if mod_xyz[dim] == var.n_cell:
 			mod_xyz[dim] = 0
 	s_id = jp_id_dic[tuple(mod_xyz)]
 	tmp_angle.append(s_id)
 	# 終点のアトムのIDを周期境界条件で変更
 	mod_xyz = list(end_xyz)[:]
 	for dim in range(3):
-		if mod_xyz[dim] == n_cell:
+		if mod_xyz[dim] == var.n_cell:
 			mod_xyz[dim] = 0
 	E_id = jp_id_dic[tuple(mod_xyz)]
 	# サブチェインの鎖長分のループ処理
-	for seg in range(n_segments):
-		pos = tuple(start_xyz + vec*(seg + 1)/(n_segments + 1.))
+	for seg in range(var.n_segments):
+		pos = tuple(start_xyz + vec*(seg + 1)/(var.n_segments + 1.))
 		tmp_xyz[sub_id] = pos
 
-		if seg == 0 or seg == n_segments - 1:
+		if seg == 0 or seg == var.n_segments - 1:
 			tmp_atom_sc.append([sub_id, 1, 1])
 		else:
 			tmp_atom_sc.append([sub_id, 2, 2])
@@ -352,9 +338,9 @@ def calc_single_strand_reg(jp_id_dic, sub_id, bond_id, b_xyz, se_xyz, n_segments
 		s_id = e_id
 		sub_id += 1
 		
-		if n_sc != 0:
+		if var.n_sc != 0:
 			sc_s_id = s_id
-			for i in range(n_sc):
+			for i in range(var.n_sc):
 				tmp_xyz[sub_id] = tuple(np.array(pos)  +  (i + 1)*mod_o_vec*unit_len)
 				tmp_atom_sc.append([sub_id, 2, 1])
 				sc_e_id = sub_id
@@ -392,13 +378,7 @@ def find_ortho_vec(vec2):
 ################################################################################
 
 # 基本構造として、8Chainモデルを設定
-def make_8chain_dic(nw_cond):
-	nw_model = nw_cond[0]
-	strand = nw_cond[1]
-	n_strand = nw_cond[2]
-	n_segments = nw_cond[3]
-	n_cell = nw_cond[4]
-	n_sc = nw_cond[5]
+def make_8chain_dic():
 	# ユニットセルでの、jp およびサブチェインの始点と終点のXYZを設定
 	jp_xyz = [
 			[0.,0.,0.], 
@@ -416,9 +396,9 @@ def make_8chain_dic(nw_cond):
 				]
 	start_jp = [0.5, 0.5, 0.5]
 	# システム全体にわたるピボットのxyzとIDの辞書を作成
-	jp_id_dic, jp_xyz_dic, atom_jp, n_jp = set_jp_id_rnd(jp_xyz, n_cell)
+	jp_id_dic, jp_xyz_dic, atom_jp, n_jp = set_jp_id_rnd(jp_xyz)
 	# ストランドの結合状態を記述
-	init_8ch_dic, vector_dic = set_strands_8(jp_id_dic, strand_se_xyz, n_cell, start_jp)
+	init_8ch_dic, vector_dic = set_strands_8(jp_id_dic, strand_se_xyz, start_jp)
 	#
 	base_top_list = [init_8ch_dic, jp_xyz_dic, atom_jp, n_jp, vector_dic]
 
@@ -426,14 +406,14 @@ def make_8chain_dic(nw_cond):
 
 ##########################################
 # システム全体にわたるjpのxyzとIDの辞書を作成
-def set_jp_id_rnd(jp_xyz, n_cell):
+def set_jp_id_rnd(jp_xyz):
 	jp_id = 0
 	jp_id_dic = {}
 	jp_xyz_dic = {}
 	atom_jp = []
-	for z in range(n_cell):
-		for y in range(n_cell):
-			for x in range(n_cell):
+	for z in range(var.n_cell):
+		for y in range(var.n_cell):
+			for x in range(var.n_cell):
 				base_xyz = np.array([x,y,z])
 				for jp in jp_xyz:
 					jp_id_dic[tuple(np.array(jp) + base_xyz)] = (jp_id)
@@ -445,13 +425,13 @@ def set_jp_id_rnd(jp_xyz, n_cell):
 
 #####################################################
 # ストランドの結合状態を記述
-def set_strands_8(jp_id_dic, strand_se_xyz, n_cell, start_jp):
+def set_strands_8(jp_id_dic, strand_se_xyz, start_jp):
 	init_8ch_dic = {}
 	vector_dic = {}
 	str_id = 0
-	for z in range(n_cell):
-		for y in range(n_cell):
-			for x in range(n_cell):
+	for z in range(var.n_cell):
+		for y in range(var.n_cell):
+			for x in range(var.n_cell):
 				base_xyz = np.array([x,y,z])
 				for xyz in strand_se_xyz:
 					# サブチェインの末端間のベクトルを設定
@@ -463,7 +443,7 @@ def set_strands_8(jp_id_dic, strand_se_xyz, n_cell, start_jp):
 					# 終点のアトムのIDを周期境界条件で変更
 					mod_end_xyz = list(end_xyz)[:]
 					for i in range(3):
-						if mod_end_xyz[i] == n_cell:
+						if mod_end_xyz[i] == var.n_cell:
 							mod_end_xyz[i] = 0
 					end_id = jp_id_dic[tuple(mod_end_xyz)]
 					#
@@ -478,18 +458,15 @@ def set_strands_8(jp_id_dic, strand_se_xyz, n_cell, start_jp):
 ################################################################################
 #########################################################
 # トポロジーの異なるネットワークを探索して、代数的連結性の分布関数を策定し、ネットワークトポロジーの配列辞書を決める。
-def top_search(nw_cond, cond_top, base_top_list):
-	n_strand = nw_cond[2]
-	n_cell = nw_cond[4]
-	#
+def top_search(base_top_list):
 	init_dic = base_top_list[0]
 	n_jp = base_top_list[3]
 	#
-	n_sampling = cond_top[1]
-	n_try = cond_top[2]
-	repeat = cond_top[3]
+	n_sampling = var.cond_top[1]
+	n_try = var.cond_top[2]
+	repeat = var.cond_top[3]
 	#
-	random_dir = str(n_strand) +"_chains_" + str(n_cell) + "_cells_"
+	random_dir = str(var.n_strand) +"_chains_" + str(var.n_cell) + "_cells_"
 	random_dir += str(n_sampling) + "_sampling_" + str(n_try) + "_trials_" + str(repeat) + "_times"
 	if os.path.isdir(random_dir):
 		print("#####\nRandom Calculation target dir exists!!\n")
@@ -503,7 +480,7 @@ def top_search(nw_cond, cond_top, base_top_list):
 	else:
 		os.makedirs(random_dir, exist_ok = True)
 	#
-	candidate_list = strand_exchange(init_dic, n_jp, cond_top, n_strand, n_cell)
+	candidate_list = strand_exchange(init_dic, n_jp)
 	#
 	with open(os.path.join(random_dir, 'init.pickle'), mode = 'wb') as f:
 		pickle.dump(candidate_list, f)
@@ -518,12 +495,12 @@ def top_search(nw_cond, cond_top, base_top_list):
 
 #####################################################
 # 任意のストランドを選択し、ストランドの繋ぎ変えを行う
-def strand_exchange(init_dic, n_jp, cond_top, n_strand, n_cell):
-	pre_sampling = cond_top[0] 
-	n_sampling = cond_top[1]
-	n_try = cond_top[2]
-	repeat = cond_top[3]
-	f_pool = cond_top[4]
+def strand_exchange(init_dic, n_jp):
+	pre_sampling = var.cond_top[0] 
+	n_sampling = var.cond_top[1]
+	n_try = var.cond_top[2]
+	repeat = var.cond_top[3]
+	f_pool = var.cond_top[4]
 	
 	if mp.cpu_count() < f_pool:
 		f_pool = int(mp.cpu_count()/2) - 1
@@ -536,13 +513,13 @@ def strand_exchange(init_dic, n_jp, cond_top, n_strand, n_cell):
 	print("Please Wait a little bit!")
 	if f_pool > 1:
 		for i in range(pre_sampling):
-			args.append([random_reduce(init_dic, n_strand, n_cell, n_jp).copy(), i, "Pre", init_dic, n_jp, n_try])
+			args.append([random_reduce(init_dic).copy(), i, "Pre", init_dic, n_jp, n_try])
 		result = p.map(search, args)
 		for data in result:
 			pre_list.extend(data)
 	else:
 		for i in range(pre_sampling):
-			args = [random_reduce(init_dic, n_strand, n_cell, n_jp).copy(), i, "Pre", init_dic, n_jp, n_try]
+			args = [random_reduce(init_dic).copy(), i, "Pre", init_dic, n_jp, n_try]
 			tmp = search(args)
 			pre_list.extend(tmp)
 	print("##################################################")
@@ -616,7 +593,7 @@ def search(args):
 
 #########################################################
 # 任意のストランドを選択し、所望の分岐数にストランドを消去
-def random_reduce(init_dic, n_strand, n_cell, n_jp):
+def random_reduce(init_dic):
 	# alg_const_init = calc_lap_mat(init_dic, n_jp)
 	# flag = 1
 	# while flag == 1:
@@ -624,9 +601,9 @@ def random_reduce(init_dic, n_strand, n_cell, n_jp):
 	del_bond = []
 	# 消去対象のストランドをリストアップ
 	# ユニットセル中のストランドから必要な数だけ抽出
-	tmp_del = random.sample(range(8), (8 - n_strand))
+	tmp_del = random.sample(range(8), (8 - var.n_strand))
 	# 全セルに渡って、消去するストランドのリストを作成
-	for i in range(n_cell**3):
+	for i in range(var.n_cell**3):
 		del_bond.extend(list(8*i + np.array(tmp_del)))
 	# ストランドを消去した辞書とその代数的連結性を得る。
 	for target in del_bond:
@@ -743,30 +720,31 @@ def make_lap_mat(topl_dic, n_jp):
 
 #########################################################
 # 過去の探索データを使って、代数的連結性の分布関数を選択
-def top_select(restart):
-	with open(os.path.join(restart, 'init.pickle'), mode = 'rb') as f:
+def top_select():
+	with open(os.path.join(var.restart, 'init.pickle'), mode = 'rb') as f:
+		print('reading previous data!')
 		candidate_list = pickle.load(f)
 	print("##################################################")
 	print("Reloaded Candidates = ", len(candidate_list))
 	print("##################################################")
 
-	return candidate_list, restart
+	return candidate_list, var.restart
 
 
 #####################################################################
 # ヒストグラム中の最大頻度を与えるネットワークトポロジーの配列辞書を決める。
-def nw_search(candidate_list, random_dir, hist_bin, multi, target_dir):
+def nw_search(candidate_list, random_dir):
 	tmp_list = []
 	val_list = []
 	data_list = []
 
 	# ヒストグラムを作成
 	histdata = list(np.array(candidate_list)[:, 1])
-	cond = ["", histdata, hist_bin, "True", ['Arg. Con.', 'Freq.']]
+	cond = ["", histdata, var.histgram_bins, "True", ['Arg. Con.', 'Freq.']]
 	x, val = make_hist_all(cond, random_dir)
 
 	# 最頻値のレンジを決める
-	val_range = find_range(x, val, multi)
+	val_range = find_range(x, val)
 	# 上記のレンジに入る配列をピックアップ
 	for i in candidate_list:
 		if i[1] >= val_range[0] and i[1] <= val_range[1]:
@@ -779,8 +757,8 @@ def nw_search(candidate_list, random_dir, hist_bin, multi, target_dir):
 			val_list.append(selected_list[1])
 			data_list.append(selected_list[0])
 			count += 1
-		if len(val_list) == multi:
-			u = UDFManager(os.path.join(target_dir, 'target_condition.udf'))
+		if len(val_list) == var.multi_mod:
+			u = UDFManager(os.path.join(var.target_dir, 'target_condition.udf'))
 			u.put(random_dir, 'TargetCond.Model.RandomData')
 			u.put(val_list, 'TargetCond.Model.SelectedValue[]')
 			u.write()
@@ -791,18 +769,18 @@ def nw_search(candidate_list, random_dir, hist_bin, multi, target_dir):
 					f.write("arg. con. = " + str(round(i, 4)) + '\n')
 			return data_list
 	#
-	print("No effective list was found for multi numbers of", multi, "!  Try again!!")
+	print("No effective list was found for multi numbers of", var.multi_mod, "!  Try again!!")
 	sys.exit()
 
 
 #######################
 # 最大頻度の範囲を決める。
-def find_range(x, val, multi):
+def find_range(x, val):
 	index = np.where(val == max(val))[0][0]
 	f_range = 0
 	value = 0
 	if index < len(val) -1:
-		while value < multi:
+		while value < var.multi_mod:
 			value = 0
 			f_range += 1
 			for i in range(2*f_range + 1):
@@ -899,9 +877,7 @@ def make_script(bin_width, random_dir, leg, f_png, f_dat, f_plt):
 ################################################################################
 # ターゲットとなるネットワーク全体の辞書を決める。
 ################################################################################
-def make_data_dic(nw_cond, base_top_list, top_dic_list):
-	n_segments = nw_cond[3]
-	n_sc = nw_cond[5]
+def make_data_dic(base_top_list, top_dic_list):
 	jp_xyz_dic = base_top_list[1]
 	atom_jp = base_top_list[2]
 	vector_dic = base_top_list[4]
@@ -911,7 +887,7 @@ def make_data_dic(nw_cond, base_top_list, top_dic_list):
 		atom_all = []
 		pos_all = {}
 		#
-		strand_xyz, bond_all, atom_strand, angle_all = make_strands(str_top_dic, jp_xyz_dic, vector_dic, n_segments, n_sc)
+		strand_xyz, bond_all, atom_strand, angle_all = make_strands(str_top_dic, jp_xyz_dic, vector_dic)
 		atom_all.extend(atom_jp)
 		atom_all.extend(atom_strand)
 		pos_all.update(jp_xyz_dic)
@@ -922,7 +898,7 @@ def make_data_dic(nw_cond, base_top_list, top_dic_list):
 	return calcd_data_dic_list
 
 # 一本のストランド中の各アトムのxyzリストとボンドリストを作成
-def make_strands(str_top_dic, jp_xyz_dic, vector_dic, n_segments, n_sc):
+def make_strands(str_top_dic, jp_xyz_dic, vector_dic):
 	strand_xyz = {}
 	bond_all = {}
 	atom_strand = []
@@ -937,7 +913,7 @@ def make_strands(str_top_dic, jp_xyz_dic, vector_dic, n_segments, n_sc):
 		vector = vector_dic[strand_id]
 		start_xyz = np.array(jp_xyz_dic[start_id])
 		end_xyz = np.array(jp_xyz_dic[end_id])
-		tmp_xyz, tmp_bond, tmp_atom_st, tmp_angle, seq_atom_id, bond_id = calc_single_strand_rnd(start_id, end_id, vector, start_xyz, end_xyz, seq_atom_id, bond_id, n_segments, n_sc)
+		tmp_xyz, tmp_bond, tmp_atom_st, tmp_angle, seq_atom_id, bond_id = calc_single_strand_rnd(start_id, end_id, vector, start_xyz, end_xyz, seq_atom_id, bond_id)
 		#
 		strand_xyz.update(tmp_xyz)
 		bond_all.update(tmp_bond)
@@ -946,7 +922,7 @@ def make_strands(str_top_dic, jp_xyz_dic, vector_dic, n_segments, n_sc):
 	return strand_xyz, bond_all, atom_strand, angle_all
 
 # 一本のストランド中の各アトムのxyzリストとボンドリストを作成
-def calc_single_strand_rnd(start_id, end_id, vector, start_xyz, end_xyz, seq_atom_id, bond_id, n_segments, n_sc):
+def calc_single_strand_rnd(start_id, end_id, vector, start_xyz, end_xyz, seq_atom_id, bond_id):
 	tmp_xyz = {}
 	tmp_bond = {}
 	tmp_angle = []
@@ -955,14 +931,14 @@ def calc_single_strand_rnd(start_id, end_id, vector, start_xyz, end_xyz, seq_ato
 	s_id = start_id
 	tmp_angle.append(s_id)
 	# ストランドの鎖長分のループ処理
-	unit_len = 1./(n_segments + 1)
+	unit_len = 1./(var.n_segments + 1)
 	ortho_vec = find_ortho_vec(vector)
 	mod_o_vec = np.linalg.norm(vector)*ortho_vec
-	for seg in range(n_segments):	
+	for seg in range(var.n_segments):	
 		#
 		pos = tuple(start_xyz + vector*(seg + 1)*unit_len)
 		tmp_xyz[seq_atom_id] = pos
-		if seg == 0 or seg == n_segments - 1:
+		if seg == 0 or seg == var.n_segments - 1:
 			tmp_atom_st.append([seq_atom_id, 1, 1])
 		else:
 			tmp_atom_st.append([seq_atom_id, 2, 2])
@@ -978,9 +954,9 @@ def calc_single_strand_rnd(start_id, end_id, vector, start_xyz, end_xyz, seq_ato
 		s_id = e_id
 		seq_atom_id += 1
 		#
-		if n_sc != 0:
+		if var.n_sc != 0:
 			sc_s_id = s_id
-			for i in range(n_sc):
+			for i in range(var.n_sc):
 				tmp_xyz[seq_atom_id] = tuple(np.array(pos)  +  (i + 1)*mod_o_vec*unit_len)
 				tmp_atom_st.append([seq_atom_id, 2, 1])
 				sc_e_id = seq_atom_id
