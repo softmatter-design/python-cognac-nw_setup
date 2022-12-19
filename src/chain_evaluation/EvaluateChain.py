@@ -17,7 +17,7 @@ import CognacUtility as CU
 from CognacBasicAnalysis import *
 from CognacGeometryAnalysis import CognacGeometryAnalysis
 #
-import chain_evaluation.values as val
+import chain_evaluation.variables as val
 ################################################################################
 # MAIN
 ################################################################################
@@ -384,9 +384,9 @@ def make_output():
 	hist_list = [
 			["bond", val.bond_list, 200, "True", ['bond length', 'Freq.'], 'box'],
 			["angle", val.angle_list, 200, "True", ['angle [deg]', 'Freq.'], 'box'],
-			["Rx", val.Rx_list, 200, "True", ['|Rx|', 'Freq.'], '' ],
-			["Ry", val.Ry_list, 200, "True", ['|Ry|', 'Freq.'], '' ],
-			["Rz", val.Rz_list, 200, "True", ['|Rz|', 'Freq.'], '' ],
+			["Rx", val.Rx_list, 200, "True", ['Rx', 'Freq.'], '' ],
+			["Ry", val.Ry_list, 200, "True", ['Ry', 'Freq.'], '' ],
+			["Rz", val.Rz_list, 200, "True", ['Rz', 'Freq.'], '' ],
 			["R", val.R_list, 200, "True", ['|R|', 'Freq.'], '' ]
 			]
 	for cond in hist_list:
@@ -508,9 +508,9 @@ def script_content():
 			script += '#\nset label 1 sprintf("frc =%.3f", frc) at graph 0.7, 0.8\n\n'
 		else:
 			script += '#set xrange [0:]\n#set yrange [0:100]\nfrc=1.0\n\n'
-			script += 'f(x) = C*exp(-1.*x**2./(2.*(frc*R1)**2.))/(2.*pi*(frc*R1)**2.)**(1/2)\n\n'
-			script += 'fit f(x) data via C, frc\n\n'
-			script += '#\nset label 1 sprintf("frc =%.3f", frc) at graph 0.7, 0.8\n\n'
+			script += 'f(x) = C*(3/(2*pi*N*CN*bond**2))**(3/2)*exp(-3*x**2/(2*N*CN*bond**2))\n\n'
+			script += 'fit f(x) data via C, CN\n\n'
+			script += '#\nset label 1 sprintf("CN =%.3f", CN) at graph 0.7, 0.8\n\n'
 		#
 		script += 'set style fill solid 0.5\nset boxwidth ' + str(val.bin_width) + '\n'
 		script += '#\nplot data w boxes noti'
@@ -521,13 +521,12 @@ def script_content():
 		script += 'bond = ' + str(val.l_bond) + '\n'
 		script += 'CN = ' + str(val.cn) + '\n'
 		script += 'f = ' + str(val.func) + '\n'
-		script += 'R1 = bond*(CN*(N+1))**0.5\n'
+		script += 'Rsq = (N+1)*bond**2\n'
 		script += 'C=0.1\nfrc=1.0\n\n'
-		script += 'f(x) = C*exp(-1.*(x-frc*R1)**2./(2.*sigma**2.))/(2.*pi*sigma**2.)**(1/2)\n\n'
-		script += '#f(x) = C*4.*pi*x**2.*(3./(2.*pi*(frc*R1)**2.))**(3./2.)*exp(-3.*x**2./(2.*(frc*R1)**2.))\n'	
-		script += 'fit f(x) data via frc, C, sigma\n\n'
-		script += '#\nset label 1 sprintf("frc.=%.3f", frc) at graph 0.7, 0.8\n'
-		script += 'set label 1 sprintf("sigma=%.3f", sigma) at graph 0.7, 0.8\n\n'
+		script += '#f(x) = C*exp(-1.*(x-frc*R1)**2./(2.*sigma**2.))/(2.*pi*sigma**2.)**(1/2)\n\n'
+		script += 'f(x) = C*4.*pi*x**2.*(3./(2.*pi*CN*Rsq))**(3./2.)*exp(-3.*x**2./(2.*CN*Rsq))\n'	
+		script += 'fit f(x) data via C, CN\n\n'
+		script += '#\nset label 1 sprintf("CN=%.3f", CN) at graph 0.7, 0.8\n'
 		script += 'set style fill solid 0.5\nset boxwidth ' + str(val.bin_width) + '\n'
 		script += '#\nplot data w boxes noti'
 		script += ', \\\n f(x)'
