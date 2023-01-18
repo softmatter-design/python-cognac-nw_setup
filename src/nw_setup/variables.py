@@ -55,6 +55,7 @@ total_net_atom = 1
 nu = 1.0
 
 target_dir = ''
+target_name = ''
 
 
 # Cognac用の名称設定

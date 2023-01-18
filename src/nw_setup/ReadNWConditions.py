@@ -438,7 +438,7 @@ def init_calc():
 # 計算用のディレクトリーを作成
 def make_dir():
 	var.target_dir = f"{var.nw_model:}_{var.entanglement:}_{var.strand:}_{var.strand_type:}_N_{var.n_segments:}_Cells_{var.n_cell:}_Multi_{var.multi_mod:}"
-	# var.target_dir = f"{var.nw_model:}_" + var.entanglement + "_" + var.strand + '_N_' + str(var.n_segments) + "_Cells_" + str(var.n_cell) + "_Multi_" + str(var.multi_mod)"
+	var.target_name = f"{var.strand:}_{var.strand_type:}_N_{var.n_segments:}_"
 	os.makedirs(var.target_dir, exist_ok = True)
 	make_cond_udf()
 	return

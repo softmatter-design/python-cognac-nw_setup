@@ -61,7 +61,7 @@ def entangle_calc(batch):
 	if var.strand_type == 'KG':
 		# Force Capped LJ によりステップワイズに初期化
 		# r = 1.1
-		batch = make_title(batch, "Calculating-Init")
+		batch = make_title(batch, var.target_name + "Calculating-Init")
 		fn_ext = ['Init_', "uin.udf"]
 		time = [0.01, 100000, 1000]
 		f_eval = 1
@@ -72,7 +72,7 @@ def entangle_calc(batch):
 		#
 		for r in var.step_rfc:
 			# 平衡化
-			batch = make_title(batch, "Calculating-Pre_" + str(round(r, 3)).replace('.', '_'))
+			batch = make_title(batch, var.target_name + "Calculating-Pre_" + str(round(r, 3)).replace('.', '_'))
 			fn_ext = ['Pre_rfc_' + str(round(r, 3)).replace('.', '_') + "_", "uin.udf"]
 			f_eval = 1
 			present_udf, read_udf, batch = make_step(fn_ext, batch, f_eval)
@@ -81,7 +81,7 @@ def entangle_calc(batch):
 			template = present_udf
 		# KG 鎖に設定
 		time = [0.01, 1000000, 10000]
-		batch = make_title(batch, "Calculating-KG")
+		batch = make_title(batch, var.target_name + "Calculating-KG")
 		fn_ext = ['KG_', "uin.udf"]
 		f_eval = 1
 		present_udf, read_udf, batch = make_step(fn_ext, batch, f_eval)
@@ -91,7 +91,7 @@ def entangle_calc(batch):
 		# 平衡化計算
 		for i in range(var.equilib_repeat):
 			# 平衡化
-			batch = make_title(batch, "Calculating-Eq_" + str(i))
+			batch = make_title(batch, var.target_name + "Calculating-Eq_" + str(i))
 			fn_ext = ['Eq_' + str(i) + "_", "uin.udf"]
 			f_eval = 1
 			present_udf, read_udf, batch = make_step(fn_ext, batch, f_eval)
@@ -102,7 +102,7 @@ def entangle_calc(batch):
 		if var.greenkubo_repeat != 0:
 			for i in range(var.greenkubo_repeat):
 				# 平衡化
-				batch = make_title(batch, "Calculating-GK_" + str(i))
+				batch = make_title(batch, var.target_name + "Calculating-GK_" + str(i))
 				fn_ext = ['GK_' + str(i) + "_", "uin.udf"]
 				f_eval = 1
 				present_udf, read_udf, batch = make_step(fn_ext, batch, f_eval)
@@ -113,7 +113,7 @@ def entangle_calc(batch):
 	elif var.strand_type == 'FENE':
 		# Force Capped LJ によりステップワイズに初期化
 		# r = 1.1
-		batch = make_title(batch, "Calculating-Init")
+		batch = make_title(batch, var.target_name + "Calculating-Init")
 		fn_ext = ['Init_', "uin.udf"]
 		time = [0.01, 100000, 1000]
 		f_eval = 1
@@ -124,7 +124,7 @@ def entangle_calc(batch):
 		#
 		for r in var.step_rfc:
 			# 平衡化
-			batch = make_title(batch, "Calculating-Pre_" + str(round(r, 3)).replace('.', '_'))
+			batch = make_title(batch, var.target_name + "Calculating-Pre_" + str(round(r, 3)).replace('.', '_'))
 			fn_ext = ['Pre_rfc_' + str(round(r, 3)).replace('.', '_') + "_", "uin.udf"]
 			f_eval = 1
 			present_udf, read_udf, batch = make_step(fn_ext, batch, f_eval)
@@ -133,7 +133,7 @@ def entangle_calc(batch):
 			template = present_udf
 		# KG 鎖に設定
 		time = [0.01, 1000000, 10000]
-		batch = make_title(batch, "Calculating-FENE")
+		batch = make_title(batch, var.target_name + "Calculating-FENE")
 		fn_ext = ['FENE_', "uin.udf"]
 		f_eval = 1
 		present_udf, read_udf, batch = make_step(fn_ext, batch, f_eval)
@@ -143,7 +143,7 @@ def entangle_calc(batch):
 		# 平衡化計算
 		for i in range(var.equilib_repeat):
 			# 平衡化
-			batch = make_title(batch, "Calculating-Eq_" + str(i))
+			batch = make_title(batch, var.target_name + "Calculating-Eq_" + str(i))
 			fn_ext = ['Eq_' + str(i) + "_", "uin.udf"]
 			f_eval = 1
 			present_udf, read_udf, batch = make_step(fn_ext, batch, f_eval)
@@ -154,7 +154,7 @@ def entangle_calc(batch):
 		if var.greenkubo_repeat != 0:
 			for i in range(var.greenkubo_repeat):
 				# 平衡化
-				batch = make_title(batch, "Calculating-GK_" + str(i))
+				batch = make_title(batch, var.target_name + "Calculating-GK_" + str(i))
 				fn_ext = ['GK_' + str(i) + "_", "uin.udf"]
 				f_eval = 1
 				present_udf, read_udf, batch = make_step(fn_ext, batch, f_eval)
@@ -165,7 +165,7 @@ def entangle_calc(batch):
 
 	elif var.strand_type == 'Harmonic':
 		# 初期状態で弱いセグメント間相互作用を入れて緩和
-		batch = make_title(batch, "Calculating-Init")
+		batch = make_title(batch, var.target_name + "Calculating-Init")
 		fn_ext = ['Init_', "uin.udf"]
 		time = [0.01, 100000, 1000]
 		f_eval = 1
@@ -175,7 +175,7 @@ def entangle_calc(batch):
 		template = present_udf
 		# セグメント間相互作用をなくす
 		time = [0.01, 1000000, 10000]
-		batch = make_title(batch, "Calculating-Harmonic")
+		batch = make_title(batch, var.target_name + "Calculating-Harmonic")
 		fn_ext = ['Harmonic_', "uin.udf"]
 		f_eval = 1
 		present_udf, read_udf, batch = make_step(fn_ext, batch, f_eval)
@@ -185,7 +185,7 @@ def entangle_calc(batch):
 		# 平衡化計算
 		for i in range(var.equilib_repeat):
 			# 平衡化
-			batch = make_title(batch, "Calculating-Eq_" + str(i))
+			batch = make_title(batch, var.target_name + "Calculating-Eq_" + str(i))
 			fn_ext = ['Eq_' + str(i) + "_", "uin.udf"]
 			f_eval = 1
 			present_udf, read_udf, batch = make_step(fn_ext, batch, f_eval)
@@ -196,7 +196,7 @@ def entangle_calc(batch):
 		if var.greenkubo_repeat != 0:
 			for i in range(var.greenkubo_repeat):
 				# 平衡化
-				batch = make_title(batch, "Calculating-GK_" + str(i))
+				batch = make_title(batch, var.target_name + "Calculating-GK_" + str(i))
 				fn_ext = ['GK_' + str(i) + "_", "uin.udf"]
 				f_eval = 1
 				present_udf, read_udf, batch = make_step(fn_ext, batch, f_eval)
@@ -210,7 +210,7 @@ def entangle_calc(batch):
 def npt_calc(batch):
 	# NPTの設定
 	pres = var.step_press[0]
-	batch = make_title(batch, "Calculating-Ini_pres_" + str(pres).replace('.', '_'))
+	batch = make_title(batch, var.target_name + "Calculating-Ini_pres_" + str(pres).replace('.', '_'))
 	fn_ext = ['Init_pres_' + str(pres).replace('.', '_') + '_', "uin.udf"]
 	time = [0.001, 1000, 100]
 	f_eval = 0
@@ -220,7 +220,7 @@ def npt_calc(batch):
 	template = present_udf
 	# ステップワイズに圧力増加
 	for pres in var.step_press[1:]:
-		batch = make_title(batch, "Calculating-Compress_" + str(pres).replace('.', '_'))
+		batch = make_title(batch, var.target_name + "Calculating-Compress_" + str(pres).replace('.', '_'))
 		fn_ext = ['Compress_pres_' + str(pres).replace('.', '_') + '_', "uin.udf"]
 		time = var.press_time 
 		f_eval = 1
@@ -230,7 +230,7 @@ def npt_calc(batch):
 		template = present_udf
 	# KG 鎖への遷移
 	time = [0.01, 1000, 100]
-	batch = make_title(batch, "Calculating-pre_KG")
+	batch = make_title(batch, var.target_name + "Calculating-pre_KG")
 	fn_ext = ['PreKG_', "uin.udf"]
 	f_eval = 1
 	present_udf, read_udf, batch = make_step(fn_ext, batch, f_eval)
@@ -239,7 +239,7 @@ def npt_calc(batch):
 	template = present_udf
 	# KG 鎖に設定
 	time = [0.01, 100000, 1000]
-	batch = make_title(batch, "Calculating-KG")
+	batch = make_title(batch, var.target_name + "Calculating-KG")
 	fn_ext = ['SetupKG_', "uin.udf"]
 	f_eval = 1
 	present_udf, read_udf, batch = make_step(fn_ext, batch, f_eval)
@@ -249,7 +249,7 @@ def npt_calc(batch):
 	# 平衡化計算
 	for i in range(var.equilib_repeat):
 		# 平衡化
-		batch = make_title(batch, "Calculating-Eq_" + str(i))
+		batch = make_title(batch, var.target_name + "Calculating-Eq_" + str(i))
 		fn_ext = ['Eq_' + str(i) + "_", "uin.udf"]
 		f_eval = 1
 		present_udf, read_udf, batch = make_step(fn_ext, batch, f_eval)
@@ -260,7 +260,7 @@ def npt_calc(batch):
 	if var.greenkubo_repeat != 0:
 		for i in range(var.greenkubo_repeat):
 			# 平衡化
-			batch = make_title(batch, "Calculating-GK_" + str(i))
+			batch = make_title(batch, var.target_name + "Calculating-GK_" + str(i))
 			fn_ext = ['GK_' + str(i) + "_", "uin.udf"]
 			f_eval = 1
 			present_udf, read_udf, batch = make_step(fn_ext, batch, f_eval)
